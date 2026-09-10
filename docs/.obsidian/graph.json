@@ -1,0 +1,17 @@
+{
+  "collapse-filter": false,
+  "search": "",
+  "showTags": true,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    { "query": "path:Architecture", "color": { "a": 1, "rgb": 4024132 } },
+    { "query": "path:Domain", "color": { "a": 1, "rgb": 14725458 } },
+    { "query": "path:Packages", "color": { "a": 1, "rgb": 5431378 } },
+    { "query": "path:Apps", "color": { "a": 1, "rgb": 11621088 } },
+    { "query": "path:Reference", "color": { "a": 1, "rgb": 8355711 } }
+  ],
+  "scale": 1
+}

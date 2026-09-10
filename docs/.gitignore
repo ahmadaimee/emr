@@ -1,0 +1,8 @@
+# Obsidian per-user state — layout, open tabs, recent files.
+# Shared config (app.json, appearance.json, core-plugins.json, graph.json) is committed.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.obsidian/plugins/
+.obsidian/themes/
+.trash/
