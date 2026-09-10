@@ -25,3 +25,9 @@ The core thesis is that **the revenue cycle should run itself, and pull in a hum
 - `packages/reporting`: Semantic layer compiling governed metrics and dimensions to parameterized SQL.
 - `packages/audit`: HMAC hash-chained audit logging and verification.
 
+## Engineering Knowledge Base
+
+`docs/` is an Obsidian vault expanding on everything above — why each rule exists, how
+tenant isolation is enforced, and what the revenue-cycle terms mean. Start at
+`docs/Grove Engineering.md`. Keep it current: a note that contradicts the code should be
+corrected or deleted, not left as a second opinion.

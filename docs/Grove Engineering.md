@@ -2,7 +2,7 @@
 tags: [moc]
 ---
 
-# Grove
+# Grove Engineering
 
 Multi-tenant practice management and **autonomous revenue cycle management** (RCM).
 
@@ -41,4 +41,5 @@ to explain intent that the code cannot state on its own.
 
 ## Conventions
 
-- [[Vault Guide]] — how to write and link notes in here
+- [[Grove Vault Guide]] — how to write and link notes in here
+- [[Grove]] — the project-level note, when these notes are mounted in the E: drive vault

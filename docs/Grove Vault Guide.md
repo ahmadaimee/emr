@@ -2,11 +2,22 @@
 tags: [meta]
 ---
 
-# Vault Guide
+# Grove Vault Guide
 
-This is an [Obsidian](https://obsidian.md) vault. Open the `docs/` folder as a vault —
-`docs/.obsidian/` carries the shared config (appearance, enabled core plugins, graph
-colour groups by folder).
+This is an [Obsidian](https://obsidian.md) vault, and it is used two ways.
+
+**Standalone** — open the `docs/` folder as a vault. `docs/.obsidian/` carries the
+shared config (appearance, enabled core plugins, graph colour groups by folder).
+
+**Mounted in the E: drive vault** — `E:\Vault\01 Projects\Grove Docs` is a directory
+junction pointing here, so these notes are searchable alongside everything else in that
+vault while still living in the repo under version control. Edits made from either side
+are the same files. The project-level note there is `[[Grove]]`, which links back into
+these notes.
+
+Because the notes are shared, every note name in here must stay unique against the
+E: drive vault — that is why the entry note is `Grove Engineering` and this one is
+`Grove Vault Guide` rather than `Home` and `Vault Guide`, which already exist there.
 
 ## What belongs here
 
@@ -30,7 +41,7 @@ to documentation too.
   readability: `[[Non-Negotiable Rules|rule 5]]`.
 - **Frontmatter**: a `tags` list on every note. Existing tags include `architecture`,
   `domain`, `packages`, `reference`, `security`, `compliance`, `money`, `moc`.
-- **`moc`** marks a map-of-content note — [[Home]], [[Packages Index]],
+- **`moc`** marks a map-of-content note — [[Grove Engineering]], [[Packages Index]],
   [[Revenue Cycle Overview]].
 - **Naming**: package notes are `Package - <name>`, so they group in the file explorer
   and autocomplete together.
@@ -43,4 +54,4 @@ contradicts the code should be corrected or deleted, not left as a second opinio
 
 ---
 
-Start at [[Home]].
+Start at [[Grove Engineering]].

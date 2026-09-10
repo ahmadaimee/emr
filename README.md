@@ -57,6 +57,24 @@ packages/ui             Grove design system
 packages/sdk            Generated TypeScript API client
 ```
 
+## Documentation
+
+`docs/` is an [Obsidian](https://obsidian.md) vault holding the engineering knowledge
+base — the reasoning the code cannot state on its own. Open the folder as a vault, or
+read the Markdown directly.
+
+| Note | For |
+|---|---|
+| `docs/Grove Engineering.md` | Start here |
+| `docs/Architecture/Non-Negotiable Rules.md` | The seven invariants below, in full |
+| `docs/Architecture/Multi-Tenancy and RLS.md` | How `withTenant` and RLS actually work |
+| `docs/Domain/Revenue Cycle Overview.md` | The end-to-end money path |
+| `docs/Domain/Claim Lifecycle.md` | The claim state machine |
+| `docs/Reference/Local Development.md` | A longer version of Getting started |
+
+Notes explain *why*; the code is the source of truth for *how*. When a change
+invalidates a note, update the note in the same commit.
+
 ## Why there is no Redis
 
 Job payloads carry claim and patient identifiers. Putting those in Redis creates a second
