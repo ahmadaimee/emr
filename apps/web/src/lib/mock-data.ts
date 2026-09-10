@@ -574,37 +574,68 @@ export function getMockRemittanceDetail(id: string) {
       payerName: 'Blue Cross Blue Shield',
       payerId: '00010',
       checkNumber: 'CHK-88912',
-      checkDate: '2026-03-05',
+      paymentDate: '2026-03-05',
+      paymentMethod: 'ACH',
       totalPaidCents: 1425000,
+      computedClaimTotalCents: 1425000,
+      providerAdjustmentTotalCents: 0,
+      balanceVarianceCents: 0,
       status: 'balanced',
       receivedAt: new Date(Date.now() - 86400000 * 1),
     },
     claims: [
       {
-        id: 'rc-1',
-        claimId: 'clm-demo-1',
+        rc: {
+          id: 'rc-1',
+          claimId: 'clm-demo-1',
+          patientControlNumber: 'CLM-2026-0101',
+          payerClaimControlNumber: 'CCN-BCBS-88910',
+          totalChargeCents: 45000,
+          totalPaidCents: 38000,
+          patientResponsibilityCents: 7000,
+          claimStatusCode: '1',
+        },
         claimNumber: 'CLM-2026-0101',
-        patientName: 'Miller, Eleanor',
-        totalChargeCents: 45000,
-        paidCents: 0,
-        patientResponsibilityCents: 0,
-        adjustments: [
-          { group: 'CO', reason: '96', amountCents: 45000, description: 'Non-covered charge(s)' },
-        ],
+        patientId: 'pat-1',
+        patientFirst: 'Eleanor',
+        patientLast: 'Miller',
       },
       {
-        id: 'rc-2',
-        claimId: 'clm-demo-4',
+        rc: {
+          id: 'rc-2',
+          claimId: 'clm-demo-4',
+          patientControlNumber: 'CLM-2026-0104',
+          payerClaimControlNumber: 'CCN-BCBS-88914',
+          totalChargeCents: 35000,
+          totalPaidCents: 28000,
+          patientResponsibilityCents: 7000,
+          claimStatusCode: '1',
+        },
         claimNumber: 'CLM-2026-0104',
-        patientName: 'Chen, Michael',
-        totalChargeCents: 35000,
-        paidCents: 28000,
-        patientResponsibilityCents: 7000,
-        adjustments: [
-          { group: 'PR', reason: '1', amountCents: 7000, description: 'Deductible Amount' },
-        ],
+        patientId: 'pat-4',
+        patientFirst: 'Michael',
+        patientLast: 'Chen',
       },
     ],
+    adjustments: [
+      {
+        id: 'adj-1',
+        remittanceClaimId: 'rc-1',
+        groupCode: 'PR',
+        reasonCode: '1',
+        reasonDescription: 'Deductible Amount',
+        amountCents: 7000,
+      },
+      {
+        id: 'adj-2',
+        remittanceClaimId: 'rc-2',
+        groupCode: 'PR',
+        reasonCode: '2',
+        reasonDescription: 'Coinsurance Amount',
+        amountCents: 7000,
+      },
+    ],
+    plb: [],
   };
 }
 
@@ -855,43 +886,7 @@ export function getMockPatientDetail(id: string) {
       { id: 'pyr-3', name: 'UnitedHealthcare' },
       { id: 'pyr-4', name: 'Cigna' },
     ],
-    soapNotes: [
-      {
-        id: 'soap-1',
-        encounterDate: '2026-03-01',
-        providerName: 'Dr. Marcus Vance, MD',
-        providerNpi: '1487654321',
-        status: 'signed_and_locked',
-        signedAt: new Date(Date.now() - 86400000 * 2 + 7200000),
-        vitals: {
-          bloodPressure: '122/78 mmHg',
-          heartRate: '72 bpm',
-          temperature: '98.4 °F',
-          respiratoryRate: '16 /min',
-          spo2: '99% on room air',
-          weightLbs: '142 lbs',
-          heightInches: '65 in',
-          bmi: '23.6',
-        },
-        subjective: {
-          chiefComplaint: 'Acute low back pain radiating to left buttock for 4 days after lifting garden soil.',
-          hpi: 'Patient is a 43-year-old female presenting with sharp, aching low back pain (severity 6/10) that started 4 days ago. Pain worsens with prolonged sitting and forward bending. Relieved by lying flat with knees elevated. No numbness, tingling, or lower extremity weakness. No bowel or bladder dysfunction (red flags negative).',
-          ros: 'Constitutional: No fevers, chills, or unexplained weight loss. Musculoskeletal: Positive for lumbar spine stiffness. Neurological: Negative for paresthesias or weakness.',
-        },
-        objective: {
-          exam: 'Patient appears in mild distress when transitioning from seated to standing position. Normal gait. Lumbar spine demonstrates tenderness to palpation over L4-L5 paraspinal musculature. Range of motion: flexion limited to 60 degrees secondary to pain. Straight leg raise (SLR) negative bilaterally. Deep tendon reflexes: Patellar 2+ bilaterally, Achilles 2+ bilaterally. Sensation to light touch intact in L3-S1 dermatomes bilaterally.',
-        },
-        assessment: [
-          { icd10: 'M54.5', description: 'Low back pain, unspecified', status: 'primary' },
-          { icd10: 'M25.561', description: 'Pain in right knee, unspecified', status: 'secondary' },
-        ],
-        plan: {
-          medications: 'Prescribed Cyclobenzaprine 5mg PO TID PRN muscle spasm (#15, no refills); Naproxen 500mg PO BID with food for 7 days.',
-          orders: 'Order lumbar spine plain radiographs 2-views to evaluate alignment and disc spaces. Physical therapy referral: Lumbar stabilization exercises 2x/week for 6 weeks.',
-          instructions: 'Advised patient on core ergonomics, avoiding heavy lifting (>15 lbs), alternating heat/ice 20 mins every 3 hours. Return to clinic in 3 weeks or immediately if numbness, foot drop, or urinary changes develop.',
-        },
-      },
-    ],
+    soapNotes: getPatientSoapNotes(id),
     medicalHistory: {
       conditions: [
         { id: 'c-1', condition: 'Essential Hypertension', icd10: 'I10', onsetYear: '2020', status: 'active', notes: 'Well controlled on Lisinopril' },
@@ -923,133 +918,217 @@ export function getMockPatientDetail(id: string) {
       { id: 'med-2', name: 'Fluticasone Propionate', dosage: '50 mcg/actuation', route: 'Nasal Spray', frequency: '1 spray per nostril daily', indication: 'Allergic rhinitis', prescriber: 'Dr. Marcus Vance, MD', startDate: '2022-03-10', status: 'active' },
       { id: 'med-3', name: 'Cholecalciferol (Vitamin D3)', dosage: '2000 IU', route: 'Oral Capsule', frequency: 'Once daily', indication: 'Vitamin D insufficiency', prescriber: 'Over the Counter', startDate: '2021-01-10', status: 'active' },
     ],
-    documents: [
-      {
-        id: 'doc-1',
-        title: 'Comprehensive Metabolic Panel (CMP) & Lipid Panel',
-        category: 'Lab Report',
-        mimeType: 'application/pdf',
-        fileSizeKb: 245,
-        storageKey: 'patients/pat-1/labs/cmp_20260215.pdf',
-        uploadedAt: new Date(Date.now() - 86400000 * 24),
-        uploadedBy: 'Quest Diagnostics (HL7 Interface)',
-        confidentiality: 'standard_phi',
-      },
-      {
-        id: 'doc-2',
-        title: 'Lumbar Spine X-Ray 2-Views (AP & Lateral)',
-        category: 'Diagnostic Imaging',
-        mimeType: 'application/pdf',
-        fileSizeKb: 1840,
-        storageKey: 'patients/pat-1/imaging/lumbar_xray_20260301.pdf',
-        uploadedAt: new Date(Date.now() - 86400000 * 2),
-        uploadedBy: 'Dr. Marcus Vance, MD',
-        confidentiality: 'standard_phi',
-      },
-      {
-        id: 'doc-3',
-        title: 'HIPAA Notice of Privacy Practices & Consent for Treatment',
-        category: 'Consent & Legal',
-        mimeType: 'application/pdf',
-        fileSizeKb: 120,
-        storageKey: 'patients/pat-1/consents/hipaa_consent_signed.pdf',
-        uploadedAt: new Date(Date.now() - 86400000 * 90),
-        uploadedBy: 'Front Desk Kiosk',
-        confidentiality: 'standard_phi',
-      },
-      {
-        id: 'doc-4',
-        title: 'Front & Back Photo: BCBS Insurance Card',
-        category: 'Insurance Card',
-        mimeType: 'image/jpeg',
-        fileSizeKb: 450,
-        storageKey: 'patients/pat-1/insurance/bcbs_card_front_back.jpg',
-        uploadedAt: new Date(Date.now() - 86400000 * 90),
-        uploadedBy: 'Mobile Patient Intake',
-        confidentiality: 'standard_phi',
-      },
-    ],
+    documents: getPatientDocuments(id),
   };
 }
 
+// In-memory demo state that persists during active server session
+const INITIAL_SOAP_NOTES: any[] = [
+  {
+    id: 'soap-1',
+    encounterDate: '2026-03-01',
+    providerName: 'Dr. Marcus Vance, MD',
+    providerNpi: '1487654321',
+    status: 'signed_and_locked',
+    signedAt: new Date(Date.now() - 86400000 * 2 + 7200000),
+    vitals: {
+      bloodPressure: '122/78 mmHg',
+      heartRate: '72 bpm',
+      temperature: '98.4 °F',
+      respiratoryRate: '16 /min',
+      spo2: '99% on room air',
+      weightLbs: '142 lbs',
+      heightInches: '65 in',
+      bmi: '23.6',
+    },
+    subjective: {
+      chiefComplaint: 'Acute low back pain radiating to left buttock for 4 days after lifting garden soil.',
+      hpi: 'Patient is a 43-year-old female presenting with sharp, aching low back pain (severity 6/10) that started 4 days ago. Pain worsens with prolonged sitting and forward bending. Relieved by lying flat with knees elevated. No numbness, tingling, or lower extremity weakness. No bowel or bladder dysfunction (red flags negative).',
+      ros: 'Constitutional: No fevers, chills, or unexplained weight loss. Musculoskeletal: Positive for lumbar spine stiffness. Neurological: Negative for paresthesias or weakness.',
+    },
+    objective: {
+      exam: 'Patient appears in mild distress when transitioning from seated to standing position. Normal gait. Lumbar spine demonstrates tenderness to palpation over L4-L5 paraspinal musculature. Range of motion: flexion limited to 60 degrees secondary to pain. Straight leg raise (SLR) negative bilaterally. Deep tendon reflexes: Patellar 2+ bilaterally, Achilles 2+ bilaterally. Sensation to light touch intact in L3-S1 dermatomes bilaterally.',
+    },
+    assessment: [
+      { icd10: 'M54.5', description: 'Low back pain, unspecified', status: 'primary' },
+      { icd10: 'M25.561', description: 'Pain in right knee, unspecified', status: 'secondary' },
+    ],
+    plan: {
+      medications: 'Prescribed Cyclobenzaprine 5mg PO TID PRN muscle spasm (#15, no refills); Naproxen 500mg PO BID with food for 7 days.',
+      orders: 'Order lumbar spine plain radiographs 2-views to evaluate alignment and disc spaces. Physical therapy referral: Lumbar stabilization exercises 2x/week for 6 weeks.',
+      instructions: 'Advised patient on core ergonomics, avoiding heavy lifting (>15 lbs), alternating heat/ice 20 mins every 3 hours. Return to clinic in 3 weeks or immediately if numbness, foot drop, or urinary changes develop.',
+    },
+  },
+];
+
+const INITIAL_DOCUMENTS: any[] = [
+  {
+    id: 'doc-1',
+    title: 'Comprehensive Metabolic Panel (CMP) & Lipid Panel',
+    category: 'Lab Report',
+    mimeType: 'application/pdf',
+    fileSizeKb: 245,
+    storageKey: 'patients/pat-1/labs/cmp_20260215.pdf',
+    uploadedAt: new Date(Date.now() - 86400000 * 24),
+    uploadedBy: 'Quest Diagnostics (HL7 Interface)',
+    confidentiality: 'standard_phi',
+  },
+  {
+    id: 'doc-2',
+    title: 'Lumbar Spine X-Ray 2-Views (AP & Lateral)',
+    category: 'Diagnostic Imaging',
+    mimeType: 'application/pdf',
+    fileSizeKb: 1840,
+    storageKey: 'patients/pat-1/imaging/lumbar_xray_20260301.pdf',
+    uploadedAt: new Date(Date.now() - 86400000 * 2),
+    uploadedBy: 'Dr. Marcus Vance, MD',
+    confidentiality: 'standard_phi',
+  },
+  {
+    id: 'doc-3',
+    title: 'HIPAA Notice of Privacy Practices & Consent for Treatment',
+    category: 'Consent & Legal',
+    mimeType: 'application/pdf',
+    fileSizeKb: 120,
+    storageKey: 'patients/pat-1/consents/hipaa_consent_signed.pdf',
+    uploadedAt: new Date(Date.now() - 86400000 * 90),
+    uploadedBy: 'Front Desk Kiosk',
+    confidentiality: 'standard_phi',
+  },
+  {
+    id: 'doc-4',
+    title: 'Front & Back Photo: BCBS Insurance Card',
+    category: 'Insurance Card',
+    mimeType: 'image/jpeg',
+    fileSizeKb: 450,
+    storageKey: 'patients/pat-1/insurance/bcbs_card_front_back.jpg',
+    uploadedAt: new Date(Date.now() - 86400000 * 90),
+    uploadedBy: 'Mobile Patient Intake',
+    confidentiality: 'standard_phi',
+  },
+];
+
+const GLOBAL_SOAP_NOTES: Record<string, any[]> = {
+  'pat-1': [...INITIAL_SOAP_NOTES],
+};
+
+const GLOBAL_DOCUMENTS: Record<string, any[]> = {
+  'pat-1': [...INITIAL_DOCUMENTS],
+};
+
+function getPatientSoapNotes(id: string): any[] {
+  if (!GLOBAL_SOAP_NOTES[id]) {
+    GLOBAL_SOAP_NOTES[id] = [...INITIAL_SOAP_NOTES];
+  }
+  return GLOBAL_SOAP_NOTES[id]!;
+}
+
+function getPatientDocuments(id: string): any[] {
+  if (!GLOBAL_DOCUMENTS[id]) {
+    GLOBAL_DOCUMENTS[id] = [...INITIAL_DOCUMENTS];
+  }
+  return GLOBAL_DOCUMENTS[id]!;
+}
+
+export function addMockSoapNote(patientId: string, note: any) {
+  if (!GLOBAL_SOAP_NOTES[patientId]) {
+    GLOBAL_SOAP_NOTES[patientId] = [...INITIAL_SOAP_NOTES];
+  }
+  GLOBAL_SOAP_NOTES[patientId]!.unshift(note);
+}
+
+export function addMockDocument(patientId: string, doc: any) {
+  if (!GLOBAL_DOCUMENTS[patientId]) {
+    GLOBAL_DOCUMENTS[patientId] = [...INITIAL_DOCUMENTS];
+  }
+  GLOBAL_DOCUMENTS[patientId]!.unshift(doc);
+}
+
+const GLOBAL_PAYMENTS: any[] = [
+  {
+    id: 'pmt-1',
+    paymentNumber: 'PMT-2026-0045',
+    source: 'patient_card',
+    amountCents: 5000,
+    allocatedCents: 5000,
+    unallocatedCents: 0,
+    status: 'settled',
+    referenceNumber: 'AUTH_992182',
+    method: 'Visa •••• 4242',
+    postedAt: new Date(Date.now() - 3600000 * 2),
+    patientName: 'Miller, Eleanor',
+    mrn: 'MRN-44910',
+    patientId: 'pat-1',
+    claimNumber: 'CLM-2026-0101',
+    practiceName: 'Orchard Family Practice',
+  },
+  {
+    id: 'pmt-2',
+    paymentNumber: 'PMT-2026-0044',
+    source: 'patient_check',
+    amountCents: 12000,
+    allocatedCents: 12000,
+    unallocatedCents: 0,
+    status: 'settled',
+    referenceNumber: 'CHK-4491',
+    method: 'Check #4491',
+    postedAt: new Date(Date.now() - 3600000 * 5),
+    patientName: 'Johnson, Robert',
+    mrn: 'MRN-44911',
+    patientId: 'pat-2',
+    claimNumber: 'CLM-2026-0102',
+    practiceName: 'Orchard Family Practice',
+  },
+  {
+    id: 'pmt-3',
+    paymentNumber: 'PMT-2026-0043',
+    source: 'patient_cash',
+    amountCents: 2500,
+    allocatedCents: 2500,
+    unallocatedCents: 0,
+    status: 'settled',
+    referenceNumber: 'REC-08912',
+    method: 'Cash Copay',
+    postedAt: new Date(Date.now() - 86400000 * 1),
+    patientName: 'Davis, Sophia',
+    mrn: 'MRN-44912',
+    patientId: 'pat-3',
+    claimNumber: 'CLM-2026-0103',
+    practiceName: 'Valley Internal Medicine',
+  },
+  {
+    id: 'pmt-4',
+    paymentNumber: 'PMT-2026-0042',
+    source: 'patient_ach',
+    amountCents: 48000,
+    allocatedCents: 40000,
+    unallocatedCents: 8000,
+    status: 'settled',
+    referenceNumber: 'ACH-88910',
+    method: 'ACH Direct Debit (••••9812)',
+    postedAt: new Date(Date.now() - 86400000 * 2),
+    patientName: 'Martinez, Carlos',
+    mrn: 'MRN-44914',
+    patientId: 'pat-5',
+    claimNumber: 'CLM-2026-0105',
+    practiceName: 'Valley Internal Medicine',
+  },
+];
+
+export function addMockPayment(pmt: any) {
+  GLOBAL_PAYMENTS.unshift(pmt);
+}
+
 export function getMockPaymentsData() {
+  const totalCollectedTodayCents = GLOBAL_PAYMENTS.reduce((sum, p) => sum + p.amountCents, 177500);
   const summary = {
-    totalCollectedTodayCents: 245000,
+    totalCollectedTodayCents,
     patientPaymentsMtdCents: 1890000,
     unallocatedCreditsCents: 125000,
-    settledCount: 48,
+    settledCount: 44 + GLOBAL_PAYMENTS.length,
   };
 
-  const payments = [
-    {
-      id: 'pmt-1',
-      paymentNumber: 'PMT-2026-0045',
-      source: 'patient_card',
-      amountCents: 5000,
-      allocatedCents: 5000,
-      unallocatedCents: 0,
-      status: 'settled',
-      referenceNumber: 'AUTH_992182',
-      method: 'Visa •••• 4242',
-      postedAt: new Date(Date.now() - 3600000 * 2),
-      patientName: 'Miller, Eleanor',
-      mrn: 'MRN-44910',
-      patientId: 'pat-1',
-      claimNumber: 'CLM-2026-0101',
-      practiceName: 'Orchard Family Practice',
-    },
-    {
-      id: 'pmt-2',
-      paymentNumber: 'PMT-2026-0044',
-      source: 'patient_check',
-      amountCents: 12000,
-      allocatedCents: 12000,
-      unallocatedCents: 0,
-      status: 'settled',
-      referenceNumber: 'CHK-4491',
-      method: 'Check #4491',
-      postedAt: new Date(Date.now() - 3600000 * 5),
-      patientName: 'Johnson, Robert',
-      mrn: 'MRN-44911',
-      patientId: 'pat-2',
-      claimNumber: 'CLM-2026-0102',
-      practiceName: 'Orchard Family Practice',
-    },
-    {
-      id: 'pmt-3',
-      paymentNumber: 'PMT-2026-0043',
-      source: 'patient_cash',
-      amountCents: 2500,
-      allocatedCents: 2500,
-      unallocatedCents: 0,
-      status: 'settled',
-      referenceNumber: 'REC-08912',
-      method: 'Cash Copay',
-      postedAt: new Date(Date.now() - 86400000 * 1),
-      patientName: 'Davis, Sophia',
-      mrn: 'MRN-44912',
-      patientId: 'pat-3',
-      claimNumber: 'CLM-2026-0103',
-      practiceName: 'Valley Internal Medicine',
-    },
-    {
-      id: 'pmt-4',
-      paymentNumber: 'PMT-2026-0042',
-      source: 'patient_ach',
-      amountCents: 48000,
-      allocatedCents: 40000,
-      unallocatedCents: 8000,
-      status: 'settled',
-      referenceNumber: 'ACH-88910',
-      method: 'ACH Direct Debit (••••9812)',
-      postedAt: new Date(Date.now() - 86400000 * 2),
-      patientName: 'Martinez, Carlos',
-      mrn: 'MRN-44914',
-      patientId: 'pat-5',
-      claimNumber: 'CLM-2026-0105',
-      practiceName: 'Valley Internal Medicine',
-    },
-  ];
+  const payments = [...GLOBAL_PAYMENTS];
 
   const patients = [
     { id: 'pat-1', name: 'Miller, Eleanor', mrn: 'MRN-44910', balanceCents: 5000 },

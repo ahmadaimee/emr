@@ -157,6 +157,48 @@ export async function createSoapNote(formData: FormData) {
     });
   });
 
+  try {
+    const { addMockSoapNote } = await import('@/lib/mock-data');
+    addMockSoapNote(patientId, {
+      id: `soap-${Date.now()}`,
+      encounterDate: new Date().toISOString().split('T')[0],
+      providerName: 'Dr. Marcus Vance, MD',
+      providerNpi: '1487654321',
+      status: signed ? 'signed_and_locked' : 'draft',
+      signedAt: signed ? new Date() : null,
+      vitals: {
+        bloodPressure: bp || '120/80 mmHg',
+        heartRate: hr ? `${hr} bpm` : '72 bpm',
+        temperature: temp ? `${temp} °F` : '98.6 °F',
+        respiratoryRate: rr ? `${rr} /min` : '16 /min',
+        spo2: spo2 ? `${spo2}% on room air` : '99% on room air',
+        weightLbs: weight ? `${weight} lbs` : '150 lbs',
+        heightInches: height ? `${height} in` : '68 in',
+        bmi: '22.8',
+      },
+      subjective: {
+        chiefComplaint: subjective || 'Patient follow-up encounter.',
+        hpi: subjective,
+        ros: 'Constitutional: No fever, no acute distress.',
+      },
+      objective: {
+        exam: objective || 'Physical examination unremarkable. Vital signs stable.',
+      },
+      assessment: [
+        {
+          icd10: primaryIcd10 || 'Z00.00',
+          description: primaryDiagnosis || 'Encounter for general adult medical examination',
+          status: 'primary',
+        },
+      ],
+      plan: {
+        medications: 'Continue prescribed maintenance medications.',
+        orders: 'Routine clinical monitoring.',
+        instructions: plan || 'Follow-up in 3 weeks or PRN worsening symptoms.',
+      },
+    });
+  } catch {}
+
   revalidatePath(`/patients/${patientId}`);
 }
 
@@ -182,6 +224,21 @@ export async function uploadPatientDocument(formData: FormData) {
       context: { title, category },
     });
   });
+
+  try {
+    const { addMockDocument } = await import('@/lib/mock-data');
+    addMockDocument(patientId, {
+      id: `doc-${Date.now()}`,
+      title,
+      category,
+      mimeType: 'application/pdf',
+      fileSizeKb: Math.floor(100 + Math.random() * 400),
+      storageKey: `patients/${patientId}/${category.toLowerCase().replace(/\s+/g, '_')}/${Date.now()}.pdf`,
+      uploadedAt: new Date(),
+      uploadedBy: 'Attending Clinician (Live Session)',
+      confidentiality: 'standard_phi',
+    });
+  } catch {}
 
   revalidatePath(`/patients/${patientId}`);
 }

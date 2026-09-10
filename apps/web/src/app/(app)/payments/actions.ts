@@ -55,6 +55,27 @@ export async function recordPaymentAction(formData: FormData) {
     });
   });
 
+  try {
+    const { addMockPayment } = await import('@/lib/mock-data');
+    addMockPayment({
+      id: `pmt-${Date.now()}`,
+      paymentNumber: `PMT-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      source: paymentSource,
+      amountCents,
+      allocatedCents: amountCents,
+      unallocatedCents: 0,
+      status: 'settled',
+      referenceNumber,
+      method: paymentSource === 'patient_card' ? 'Visa •••• 4242' : paymentSource.replace(/_/g, ' ').toUpperCase(),
+      postedAt: new Date(),
+      patientName: 'Miller, Eleanor',
+      mrn: 'MRN-44910',
+      patientId: patientId || 'pat-1',
+      claimNumber: 'CLM-2026-0101',
+      practiceName: 'Orchard Family Practice',
+    });
+  } catch {}
+
   revalidatePath('/payments');
   revalidatePath('/dashboard');
   if (patientId) revalidatePath(`/patients/${patientId}`);
