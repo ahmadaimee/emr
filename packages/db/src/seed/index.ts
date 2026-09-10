@@ -56,7 +56,7 @@ async function main() {
       const drOkafor = randomUUID();
       await tx`
         insert into providers (id, org_id, practice_id, first_name, last_name, credentials, npi, taxonomy_code, license_state, state_license) values
-          (${drSmith},  ${ORG_ID}, ${northside}, 'Jane',   'Smith',  'MD', '1987654321', '207Q00000X', 'IL', 'IL-036-111111'),
+          (${drSmith},  ${ORG_ID}, ${northside}, 'Jane',   'Smith',  'MD', '1987654328', '207Q00000X', 'IL', 'IL-036-111111'),
           (${drPatel},  ${ORG_ID}, ${northside}, 'Arjun',  'Patel',  'DO', '1972612544', '207Q00000X', 'IL', 'IL-036-222222'),
           (${drOkafor}, ${ORG_ID}, ${eastgate},  'Chidi',  'Okafor', 'MD', '1568450813', '207X00000X', 'IL', 'IL-036-333333')
       `;

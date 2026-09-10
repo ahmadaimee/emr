@@ -303,8 +303,11 @@ function serviceLineSegments(l: ServiceLine, c: ProfessionalClaim): Segment[] {
     out.push(seg('CTP', '', '', '', l.ndc.quantity, l.ndc.unit));
   }
 
-  // 2420A Line-level rendering provider override
-  if (l.renderingProvider) {
+  // 2420A Line-level rendering provider. Situational: send it ONLY when the line's
+  // provider differs from the one already reported at claim level (2310B). Repeating an
+  // identical loop on every line is a TR3 violation and some payers reject the file.
+  const claimRendering = c.renderingProvider?.npi ?? c.billingProvider.npi;
+  if (l.renderingProvider && l.renderingProvider.npi !== claimRendering) {
     out.push(...nm1Provider('82', l.renderingProvider));
     if (l.renderingProvider.taxonomyCode) out.push(seg('PRV', 'PE', 'PXC', l.renderingProvider.taxonomyCode));
   }

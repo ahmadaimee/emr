@@ -363,12 +363,12 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
             <div>
               <span className="text-[10px] font-semibold uppercase text-ink-4 block">Rendering Clinician</span>
               <div className="font-semibold text-ink mt-0.5">{doc.firstName} {doc.lastName}, MD</div>
-              <div className="text-ink-3 mt-0.5">NPI: <span className="g-mono">{doc.npi || '1487654321'}</span></div>
+              <div className="text-ink-3 mt-0.5">NPI: <span className="g-mono">{doc.npi || '1487654323'}</span></div>
             </div>
             <div>
               <span className="text-[10px] font-semibold uppercase text-ink-4 block">Billing Entity &amp; Facility</span>
               <div className="font-semibold text-ink mt-0.5">{prc.name || 'Orchard Family Practice'}</div>
-              <div className="text-ink-3 mt-0.5">Facility: {c.facilityName || 'Orchard Medical Clinic'} (NPI: {c.facilityNpi || '1992837465'})</div>
+              <div className="text-ink-3 mt-0.5">Facility: {c.facilityName || 'Orchard Medical Clinic'} (NPI: {c.facilityNpi || '1992837462'})</div>
             </div>
           </div>
 

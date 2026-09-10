@@ -27,7 +27,7 @@ const baseFacts = (): ClaimFacts => ({
   coverage: { memberId: 'ABC123', relationshipCode: '18', effectiveDate: '2026-01-01', lastVerifiedAt: '2026-08-18', lastVerifiedStatus: 'active' },
   payer: { id: 'py1', name: 'Sample Health Plan', type: 'commercial', timelyFilingDays: 180, supportsSecondaryElectronic: true },
   billingProvider: { npi: '1234567893', taxId: '123456789', taxonomyCode: '207Q00000X', postalCode: '627011234' },
-  renderingProvider: { npi: '1987654321', taxonomyCode: '207Q00000X', enrollmentStatus: 'participating' },
+  renderingProvider: { npi: '1987654328', taxonomyCode: '207Q00000X', enrollmentStatus: 'participating' },
   location: { postalCode: '627011234', macJurisdiction: 'J6', state: 'IL' },
   sameDayLinesOnOtherClaims: [],
   today: '2026-09-01',
@@ -46,7 +46,7 @@ const ref: ReferenceData = {
 describe('NPI check digit', () => {
   it('validates real-format NPIs', () => {
     expect(isValidNpi('1234567893')).toBe(true);
-    expect(isValidNpi('1987654321')).toBe(true);
+    expect(isValidNpi('1987654328')).toBe(true);
     expect(isValidNpi('1234567890')).toBe(false);
     expect(isValidNpi('123456789')).toBe(false);
   });

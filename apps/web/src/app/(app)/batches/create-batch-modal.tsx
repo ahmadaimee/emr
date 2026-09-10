@@ -74,7 +74,7 @@ export function CreateBatchModal() {
                   onChange={(e) => setPractice(e.target.value)}
                   className="w-full h-8 rounded-md border border-line-strong bg-surface px-2 text-xs text-ink focus:border-grove focus:outline-hidden"
                 >
-                  <option value="Orchard Family Practice">Orchard Family Practice (NPI 1487654321)</option>
+                  <option value="Orchard Family Practice">Orchard Family Practice (NPI 1487654323)</option>
                   <option value="Valley Internal Medicine">Valley Internal Medicine (NPI 1982736450)</option>
                   <option value="All Practices">All Practice Locations (Consolidated)</option>
                 </select>

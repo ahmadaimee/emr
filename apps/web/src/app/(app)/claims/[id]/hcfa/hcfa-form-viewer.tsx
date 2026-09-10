@@ -461,7 +461,7 @@ export function HcfaFormViewer({
             </div>
             <div className="flex justify-between items-center border-t border-red-300 mt-1 pt-0.5">
               <span className={`text-[8px] font-bold ${labelColor}`}>17a. QUAL:</span>
-              <span className="font-mono text-[9px] font-bold">17b. NPI: {doc.npi || prc.npi || '1487654321'}</span>
+              <span className="font-mono text-[9px] font-bold">17b. NPI: {doc.npi || prc.npi || '1487654323'}</span>
             </div>
             <div className="border-t border-red-300 mt-1 pt-0.5">
               <span className={`text-[8px] font-black uppercase ${labelColor}`}>
@@ -599,7 +599,7 @@ export function HcfaFormViewer({
                   </div>
                   <div className="col-span-1">{hasData ? line.units || 1 : '·'}</div>
                   <div className="col-span-1 font-mono text-[8px] text-neutral-800">
-                    {hasData ? doc.npi || '1487654321' : '· · · · · · · · · ·'}
+                    {hasData ? doc.npi || '1487654323' : '· · · · · · · · · ·'}
                   </div>
                 </div>
               </div>
@@ -697,7 +697,7 @@ export function HcfaFormViewer({
                 <div className="font-mono text-neutral-700">100 MEDICAL CENTER DR</div>
                 <div className="font-mono text-neutral-700">SPRINGFIELD, IL 62704</div>
                 <div className="font-mono font-bold text-neutral-950 mt-0.5">
-                  a. NPI: {c.facilityNpi || '1992837465'}
+                  a. NPI: {c.facilityNpi || '1992837462'}
                 </div>
               </div>
 
@@ -711,7 +711,7 @@ export function HcfaFormViewer({
                 <div className="font-mono text-neutral-700">742 EVERGREEN TERRACE</div>
                 <div className="font-mono text-neutral-700">TEL: (555) 234-8901</div>
                 <div className="font-mono font-bold text-neutral-950 mt-0.5">
-                  a. NPI: {prc.npi || '1487654321'}
+                  a. NPI: {prc.npi || '1487654323'}
                 </div>
               </div>
             </div>

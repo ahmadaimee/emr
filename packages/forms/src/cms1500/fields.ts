@@ -126,7 +126,10 @@ export function claimToCms1500(c: ProfessionalClaim, opts: { priorPaidCents?: nu
     box22_code: c.frequencyCode === '7' ? '7' : c.frequencyCode === '8' ? '8' : '',
     box22_ref: c.originalPayerClaimControlNumber ?? '',
     box23: c.priorAuthorizationNumber ?? c.referralNumber ?? c.cliaNumber ?? '',
-    box24: c.lines.slice(0, 6).map((l) => ({
+    // Every line is mapped. `renderCms1500` paginates them six to a sheet, because box
+    // 28 is the whole claim: truncating here would print a total that disagrees with
+    // the lines above it, and the payer would reject the claim for the mismatch.
+    box24: c.lines.map((l) => ({
       from: mmddyy(l.serviceDate),
       to: mmddyy(l.serviceDateThrough ?? l.serviceDate),
       pos: l.placeOfService ?? c.placeOfService,

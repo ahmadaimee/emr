@@ -34,8 +34,8 @@ describe('tokenizer', () => {
   });
 
   it('validates SE segment counts', () => {
-    const raw = fixture('sample-835.x12').replace('SE*44*0001', 'SE*43*0001');
-    expect(() => splitTransactionSets(tokenize(raw))).toThrow(/SE01 declares 43/);
+    const raw = fixture('sample-835.x12').replace('SE*43*0001', 'SE*42*0001');
+    expect(() => splitTransactionSets(tokenize(raw))).toThrow(/SE01 declares 42/);
   });
 });
 
@@ -176,7 +176,7 @@ describe('837P generator', () => {
     renderingProvider: {
       isPerson: true,
       person: { lastName: 'SMITH', firstName: 'JANE' },
-      npi: '1987654321',
+      npi: '1987654328',
       taxonomyCode: '207Q00000X',
     },
     subscriber: {
@@ -327,7 +327,7 @@ describe('270 generator', () => {
     const body = generate270(
       {
         payer: { name: 'SAMPLE HEALTH PLAN', id: 'SHP001' },
-        provider: { isPerson: true, person: { lastName: 'SMITH', firstName: 'JANE' }, npi: '1987654321' },
+        provider: { isPerson: true, person: { lastName: 'SMITH', firstName: 'JANE' }, npi: '1987654328' },
         subscriber: { person: { lastName: 'ALPHA', firstName: 'ALICE' }, memberId: 'ABC123456789', dateOfBirth: '1980-01-01', sex: 'F' },
         serviceDate: '2026-09-02',
         serviceTypeCodes: ['30', '98'],

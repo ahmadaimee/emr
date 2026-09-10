@@ -14,7 +14,7 @@ const claim: ProfessionalClaim = {
   releaseOfInformation: 'Y',
   diagnoses: ['E119', 'I10'],
   billingProvider: { isPerson: false, organization: { name: 'NORTHSIDE FAMILY MEDICINE' }, npi: '1234567893', taxId: '123456789', taxIdType: 'EI', address: { line1: '100 MAIN ST', city: 'SPRINGFIELD', state: 'IL', postalCode: '627011234' } },
-  renderingProvider: { isPerson: true, person: { lastName: 'SMITH', firstName: 'JANE' }, npi: '1987654321' },
+  renderingProvider: { isPerson: true, person: { lastName: 'SMITH', firstName: 'JANE' }, npi: '1987654328' },
   subscriber: { person: { lastName: 'ALPHA', firstName: 'ALICE', middleName: 'M' }, memberId: 'ABC123456789', groupNumber: 'GRP5550', dateOfBirth: '1980-01-01', sex: 'F', address: { line1: '12 OAK LANE', city: 'SPRINGFIELD', state: 'IL', postalCode: '62701' }, relationshipToPatient: '18' },
   payer: { name: 'SAMPLE HEALTH PLAN', payerId: 'SHP001', claimFilingIndicator: 'CI' },
   payerSequence: 'P',

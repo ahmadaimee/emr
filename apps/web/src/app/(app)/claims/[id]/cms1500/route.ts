@@ -93,7 +93,7 @@ export async function GET(
       box14_qual: '431',
       box17: `${doc.lastName || 'Vance'}, ${doc.firstName || 'Marcus'} MD`,
       box17_qual: 'DN',
-      box17b: doc.npi || '1487654321',
+      box17b: doc.npi || '1487654323',
       box18_from: '',
       box18_to: '',
       box21_icd: '0',
@@ -112,7 +112,7 @@ export async function GET(
         charge: `${Math.floor((l.chargeCents || 25000) / 100)} 00`,
         units: String(l.units || 1),
         epsdt: '',
-        renderingNpi: doc.npi || '1487654321',
+        renderingNpi: doc.npi || '1487654323',
       })),
       box25: prc.taxId || 'XX-XXX1234',
       box25_type: 'EIN',
@@ -124,12 +124,12 @@ export async function GET(
       box32_name: c.facilityName || 'Orchard Medical Clinic',
       box32_addr1: '100 Medical Center Dr',
       box32_addr2: 'Springfield, IL 62704',
-      box32a: c.facilityNpi || '1992837465',
+      box32a: c.facilityNpi || '1992837462',
       box33_name: prc.name || 'Orchard Family Practice',
       box33_addr1: '742 Evergreen Terrace',
       box33_addr2: 'Springfield, IL 62704',
       box33_phone: '5552348901',
-      box33a: prc.npi || '1487654321',
+      box33a: prc.npi || '1487654323',
     };
     const { pdf } = await renderCms1500(mockFields);
     finalBytes = pdf;

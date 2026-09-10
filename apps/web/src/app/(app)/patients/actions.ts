@@ -163,7 +163,7 @@ export async function createSoapNote(formData: FormData) {
       id: `soap-${Date.now()}`,
       encounterDate: new Date().toISOString().split('T')[0],
       providerName: 'Dr. Marcus Vance, MD',
-      providerNpi: '1487654321',
+      providerNpi: '1487654323',
       status: signed ? 'signed_and_locked' : 'draft',
       signedAt: signed ? new Date() : null,
       vitals: {

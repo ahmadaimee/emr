@@ -246,10 +246,10 @@ export function getMockClaimDetail(id: string) {
         paidCents: 0,
         balanceCents: 45000,
         patientResponsibilityCents: 0,
-        billingProviderNpi: '1487654321',
-        renderingProviderNpi: '1487654321',
+        billingProviderNpi: '1487654323',
+        renderingProviderNpi: '1487654323',
         facilityName: 'Orchard Medical Clinic',
-        facilityNpi: '1992837465',
+        facilityNpi: '1992837462',
         diagnosisCodes: ['M54.5', 'M25.561'],
         createdAt: new Date(Date.now() - 86400000 * 2),
         ...overrides,
@@ -264,7 +264,7 @@ export function getMockClaimDetail(id: string) {
       renderingProvider: {
         firstName: 'Marcus',
         lastName: 'Vance',
-        npi: '1487654321',
+        npi: '1487654323',
       },
       patient: {
         id: 'pat-1',
@@ -291,7 +291,7 @@ export function getMockClaimDetail(id: string) {
       practice: {
         id: 'prac-1',
         name: 'Orchard Family Practice',
-        npi: '1487654321',
+        npi: '1487654323',
         taxId: 'XX-XXX1234',
       },
       lines: [
@@ -1282,7 +1282,7 @@ const INITIAL_SOAP_NOTES: any[] = [
     id: 'soap-1',
     encounterDate: '2026-03-01',
     providerName: 'Dr. Marcus Vance, MD',
-    providerNpi: '1487654321',
+    providerNpi: '1487654323',
     status: 'signed_and_locked',
     signedAt: new Date(Date.now() - 86400000 * 2 + 7200000),
     vitals: {
@@ -2074,7 +2074,7 @@ const GLOBAL_PROVIDERS: any[] = [
     firstName: 'Marcus',
     lastName: 'Vance',
     credentials: 'MD',
-    npi: '1487654321',
+    npi: '1487654323',
     taxonomyCode: '207Q00000X',
     taxonomyDescription: 'Family Medicine Physician',
     licenseNumber: 'IL-036-99214',
@@ -2112,7 +2112,7 @@ const GLOBAL_PROVIDERS: any[] = [
     firstName: 'Elena',
     lastName: 'Rostova',
     credentials: 'MD',
-    npi: '1346798520',
+    npi: '1346798527',
     taxonomyCode: '208D00000X',
     taxonomyDescription: 'General Practice / Urgent Care',
     licenseNumber: 'IL-036-77341',

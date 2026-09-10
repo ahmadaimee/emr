@@ -107,7 +107,7 @@ export function NewProviderModal() {
                     type="text"
                     required
                     maxLength={10}
-                    placeholder="e.g. 1487654321"
+                    placeholder="e.g. 1487654323"
                     value={npi}
                     onChange={(e) => setNpi(e.target.value)}
                     className="w-full h-8 rounded-md border border-line-strong bg-surface px-2.5 text-xs font-mono text-ink focus:border-grove focus:outline-hidden"
