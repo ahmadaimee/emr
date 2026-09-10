@@ -242,6 +242,200 @@ export interface ReceiverInfo {
 }
 
 // ---------------------------------------------------------------------------
+// 837I / UB-04 — Institutional claim
+// ---------------------------------------------------------------------------
+
+/**
+ * One revenue line — form locators 42 through 48. An institutional claim bills by
+ * revenue code; the HCPCS in FL 44 is additional detail, not the primary key, which is
+ * the main way this differs from a professional service line.
+ */
+export interface RevenueLine {
+  lineNumber: number;
+  /** FL 42 — four-digit revenue code. */
+  revenueCode: string;
+  /** FL 43 — description, or the IDE number for an investigational device. */
+  description?: string;
+  /** FL 44 — HCPCS, accommodation rate, or HIPPS rate code. */
+  hcpcs?: string;
+  modifiers: string[];
+  /** FL 45 — service date. Required on outpatient claims. */
+  serviceDate?: string;
+  /** FL 46 — units of service. */
+  units: number;
+  /** FL 47 — total charges. */
+  chargeCents: number;
+  /** FL 48 — non-covered charges. */
+  nonCoveredCents?: number;
+}
+
+/** A diagnosis with its present-on-admission indicator (FL 67, 72). */
+export interface UbDiagnosis {
+  code: string;
+  /** Y yes, N no, U insufficient documentation, W clinically undetermined, 1 exempt. */
+  presentOnAdmission?: 'Y' | 'N' | 'U' | 'W' | '1';
+}
+
+/** FL 74 — an ICD-10-PCS procedure and the date it was performed. */
+export interface UbProcedure {
+  code: string;
+  date: string;
+}
+
+/** FL 31–34. */
+export interface OccurrenceCode {
+  code: string;
+  date: string;
+}
+
+/** FL 35–36. */
+export interface OccurrenceSpan {
+  code: string;
+  from: string;
+  through: string;
+}
+
+/** FL 39–41. Amounts are cents like everything else, even where the code is a count. */
+export interface ValueCode {
+  code: string;
+  amountCents: number;
+}
+
+/** FL 76–79 — attending, operating and other providers. */
+export interface UbProvider {
+  npi: string;
+  person: Person;
+  /** FL 76b qualifier and ID, when a secondary identifier is reported. */
+  qualifier?: string;
+  otherId?: string;
+  /** FL 78/79 only: what kind of "other" provider this is (e.g. referring, rendering). */
+  role?: string;
+}
+
+/** One payer line across FL 50–65. A UB-04 carries up to three, A/B/C. */
+export interface InstitutionalPayer {
+  /** FL 50 — payer name. */
+  name: string;
+  /** FL 51 — health plan identifier. */
+  healthPlanId: string;
+  /** FL 52 — release of information. */
+  releaseOfInformation: 'Y' | 'I' | 'N';
+  /** FL 53 — assignment of benefits. */
+  benefitsAssigned: boolean;
+  /** FL 54 — prior payments already received from this payer. */
+  priorPaymentsCents?: number;
+  /** FL 55 — estimated amount due. */
+  estimatedDueCents?: number;
+  /** FL 58 — insured's name. */
+  insuredName: string;
+  /** FL 59 — patient's relationship to the insured (01 spouse, 18 self, 19 child…). */
+  relationship: string;
+  /** FL 60 — insured's unique identifier. */
+  insuredId: string;
+  /** FL 61 / 62 — group name and number. */
+  groupName?: string;
+  groupNumber?: string;
+  /** FL 63 — treatment authorisation code. */
+  treatmentAuthCode?: string;
+  /** FL 64 — the payer's control number for the claim being replaced or voided. */
+  documentControlNumber?: string;
+  /** FL 65 — employer name. */
+  employerName?: string;
+}
+
+export interface InstitutionalClaim {
+  /** FL 3a. */
+  patientControlNumber: string;
+  /** FL 3b. */
+  medicalRecordNumber?: string;
+  /**
+   * FL 4 — Type of Bill, four digits: a leading zero, facility type, bill
+   * classification, and frequency. The fourth digit is the frequency, so 0131 is an
+   * original outpatient hospital claim and 0137 replaces one.
+   */
+  typeOfBill: string;
+  /** FL 5. */
+  federalTaxNumber: string;
+  /** FL 6 — the period this bill covers. */
+  statementFrom: string;
+  statementThrough: string;
+
+  /** FL 1 and FL 56. */
+  billingProvider: Provider;
+  /** FL 2 — only when payment goes somewhere other than the billing address. */
+  payToProvider?: Provider;
+
+  /** FL 8–11. */
+  patient: Patient & { patientId?: string };
+
+  /** FL 12–15. Absent on a non-admitted outpatient claim. */
+  admission?: {
+    date: string;
+    /** FL 13 — two-digit hour, 00–23. */
+    hour?: string;
+    /** FL 14 — priority/type of admission or visit. */
+    priority?: string;
+    /** FL 15 — point of origin. */
+    pointOfOrigin?: string;
+  };
+  /** FL 16. */
+  dischargeHour?: string;
+  /** FL 17 — patient discharge status. 01 home, 20 expired, 30 still a patient… */
+  patientStatus: string;
+
+  /** FL 18–28, up to eleven. */
+  conditionCodes: string[];
+  /** FL 29. */
+  accidentState?: string;
+  /** FL 31–34, up to four. */
+  occurrenceCodes: OccurrenceCode[];
+  /** FL 35–36, up to two. */
+  occurrenceSpans: OccurrenceSpan[];
+  /** FL 38 — responsible party, printed in the window envelope area. */
+  responsibleParty?: { name: string; address?: Address };
+  /** FL 39–41, up to twelve. */
+  valueCodes: ValueCode[];
+
+  /** FL 42–48. */
+  lines: RevenueLine[];
+  totalChargeCents: number;
+
+  /** FL 50–65, up to three. The first is the payer this claim goes to. */
+  payers: InstitutionalPayer[];
+
+  /** FL 66 — 0 for ICD-10-CM, 9 for ICD-9-CM. */
+  icdVersion: '0' | '9';
+  /** FL 67. */
+  principalDiagnosis: UbDiagnosis;
+  /** FL 67 A–Q, up to seventeen. */
+  otherDiagnoses: UbDiagnosis[];
+  /** FL 69. */
+  admittingDiagnosis?: string;
+  /** FL 70 a–c. */
+  reasonForVisit: string[];
+  /** FL 71. */
+  ppsCode?: string;
+  /** FL 72 a–c — external cause of injury. */
+  externalCauseCodes: UbDiagnosis[];
+  /** FL 74. */
+  principalProcedure?: UbProcedure;
+  /** FL 74 a–e, up to five. */
+  otherProcedures: UbProcedure[];
+
+  /** FL 76. */
+  attendingProvider: UbProvider;
+  /** FL 77. */
+  operatingProvider?: UbProvider;
+  /** FL 78–79, up to two. */
+  otherProviders: UbProvider[];
+
+  /** FL 80. */
+  remarks?: string;
+  /** FL 81 a–d — code-code, most often the billing taxonomy under qualifier B3. */
+  codeCode: Array<{ qualifier: string; code: string }>;
+}
+
+// ---------------------------------------------------------------------------
 // 835 — Remittance advice
 // ---------------------------------------------------------------------------
 

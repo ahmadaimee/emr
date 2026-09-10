@@ -158,13 +158,14 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
               </span>
             </button>
 
-            {/* Official Standard HCFA-1500 Form View */}
+            {/* The paper form that matches the claim type: institutional bills on a
+                UB-04 (CMS-1450), everything else on a CMS-1500. */}
             <Link
-              href={`/claims/${claimId}/hcfa`}
+              href={`/claims/${claimId}/${(c.claimType || '837P') === '837I' ? 'ub04' : 'hcfa'}`}
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 px-3 text-xs font-semibold text-red-700 dark:text-red-300 transition-colors"
             >
               <span>🖨️</span>
-              <span>HCFA-1500 Form</span>
+              <span>{(c.claimType || '837P') === '837I' ? 'UB-04 Form' : 'HCFA-1500 Form'}</span>
             </Link>
 
             {/* Direct CMS-1500 PDF */}

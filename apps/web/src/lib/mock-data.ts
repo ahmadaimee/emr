@@ -3797,3 +3797,146 @@ export function deleteMockProvider(id: string): { ok: boolean; reason?: string; 
   GLOBAL_PROVIDERS.splice(idx, 1);
   return { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// UB-04 / 837I — institutional claim demo data
+// ---------------------------------------------------------------------------
+
+const UB04_REVENUE_LINES = [
+  { revenueCode: '0120', description: 'ROOM-BOARD/SEMI', hcpcs: '', modifiers: [] as string[], units: 3, chargeCents: 420000 },
+  { revenueCode: '0250', description: 'PHARMACY', hcpcs: '', modifiers: [], units: 1, chargeCents: 86400 },
+  { revenueCode: '0270', description: 'MED-SUR SUPPLIES', hcpcs: '', modifiers: [], units: 1, chargeCents: 41200 },
+  { revenueCode: '0300', description: 'LABORATORY', hcpcs: '80053', modifiers: [], units: 6, chargeCents: 31800 },
+  { revenueCode: '0320', description: 'DX X-RAY', hcpcs: '71046', modifiers: [], units: 1, chargeCents: 52000 },
+  { revenueCode: '0350', description: 'CT SCAN', hcpcs: '74177', modifiers: [], units: 1, chargeCents: 118000 },
+  { revenueCode: '0360', description: 'OR SERVICES', hcpcs: '47562', modifiers: [], units: 1, chargeCents: 264000 },
+  { revenueCode: '0370', description: 'ANESTHESIA', hcpcs: '00790', modifiers: [], units: 1, chargeCents: 96000 },
+  { revenueCode: '0420', description: 'PHYSICAL THERP', hcpcs: '97110', modifiers: ['GP'], units: 2, chargeCents: 34000 },
+  { revenueCode: '0450', description: 'EMERGENCY ROOM', hcpcs: '99284', modifiers: [], units: 1, chargeCents: 92000 },
+  { revenueCode: '0636', description: 'DRUGS/DETAIL CODE', hcpcs: 'J1040', modifiers: [], units: 1, chargeCents: 44200 },
+  { revenueCode: '0710', description: 'RECOVERY ROOM', hcpcs: '', modifiers: [], units: 1, chargeCents: 58000 },
+].map((l, i) => ({ ...l, lineNumber: i + 1, serviceDate: '2026-07-14' }));
+
+const UB04_TOTAL_CENTS = UB04_REVENUE_LINES.reduce((s, l) => s + l.chargeCents, 0);
+
+/**
+ * A three-day inpatient stay, billed on a UB-04. Type of bill 0111 is hospital,
+ * inpatient, admit-through-discharge — the fourth digit is the frequency, so a
+ * replacement of this claim would be 0117.
+ */
+export function getMockUb04Detail(id: string) {
+  return {
+    a: {
+      claim: {
+        id,
+        claimNumber: 'CLM-2026-0501',
+        claimType: '837I',
+        claimFrequencyCode: '1',
+        patientControlNumber: 'GRV-INP-77120',
+        medicalRecordNumber: 'MR-4482910',
+        typeOfBill: '0111',
+        federalTaxNumber: '36-4928190',
+        statementFrom: '2026-07-12',
+        statementThrough: '2026-07-15',
+        admissionDate: '2026-07-12',
+        admissionHour: '14',
+        admissionPriority: '1',
+        pointOfOrigin: '7',
+        dischargeHour: '11',
+        patientStatus: '01',
+        conditionCodes: ['A1', '05'],
+        occurrenceCodes: [
+          { code: '11', date: '2026-07-10' },
+          { code: '24', date: '2026-07-11' },
+        ],
+        occurrenceSpans: [{ code: '70', from: '2026-07-12', through: '2026-07-15' }],
+        valueCodes: [
+          { code: '80', amountCents: 300 },
+          { code: 'A1', amountCents: 150000 },
+        ],
+        icdVersion: '0',
+        principalDiagnosis: { code: 'K80.20', presentOnAdmission: 'Y' },
+        otherDiagnoses: [
+          { code: 'E11.9', presentOnAdmission: 'Y' },
+          { code: 'I10', presentOnAdmission: 'Y' },
+          { code: 'N17.9', presentOnAdmission: 'N' },
+        ],
+        admittingDiagnosis: 'R10.11',
+        reasonForVisit: ['R10.9'],
+        principalProcedure: { code: '0FT44ZZ', date: '2026-07-13' },
+        otherProcedures: [{ code: 'BF10ZZZ', date: '2026-07-12' }],
+        remarks: 'INPATIENT ADMIT VIA ED - CHOLECYSTECTOMY',
+        codeCode: [{ qualifier: 'B3', code: '282N00000X' }],
+        totalChargeCents: UB04_TOTAL_CENTS,
+        paidCents: 0,
+        balanceCents: UB04_TOTAL_CENTS,
+        status: 'submitted',
+        createdAt: new Date(Date.now() - 86400000 * 3),
+      },
+      facility: {
+        name: 'Orchard Regional Medical Center',
+        npi: '1982736450',
+        address1: '2400 Hospital Way',
+        city: 'Springfield',
+        state: 'IL',
+        zip: '62704-9921',
+        phone: '(217) 555-4100',
+        taxonomy: '282N00000X',
+      },
+      patient: {
+        id: 'pat-1',
+        patientId: 'PT-99120',
+        lastName: 'Okafor',
+        firstName: 'Chidi',
+        middleName: 'N',
+        dateOfBirth: '1958-11-03',
+        sex: 'M',
+        address1: '88 Lakeshore Dr',
+        city: 'Springfield',
+        state: 'IL',
+        zip: '62701-1188',
+        countryCode: 'US',
+      },
+      payers: [
+        {
+          name: 'Medicare Part A',
+          healthPlanId: '00953',
+          releaseOfInformation: 'Y',
+          benefitsAssigned: true,
+          priorPaymentsCents: 0,
+          estimatedDueCents: UB04_TOTAL_CENTS,
+          insuredName: 'Okafor, Chidi N',
+          relationship: '18',
+          insuredId: '1EG4TE5MK73',
+          groupName: 'MEDICARE',
+          groupNumber: '',
+          treatmentAuthCode: 'AUTH-5521',
+          documentControlNumber: '',
+          employerName: '',
+        },
+        {
+          name: 'Blue Cross Medigap',
+          healthPlanId: '84980',
+          releaseOfInformation: 'Y',
+          benefitsAssigned: true,
+          priorPaymentsCents: 0,
+          estimatedDueCents: 0,
+          insuredName: 'Okafor, Chidi N',
+          relationship: '18',
+          insuredId: 'BCX884120773',
+          groupName: 'BLUE CHOICE PPO',
+          groupNumber: 'GRP-77120',
+          treatmentAuthCode: '',
+          documentControlNumber: '',
+          employerName: '',
+        },
+      ],
+      providers: {
+        attending: { npi: '1487654323', lastName: 'Vance', firstName: 'Marcus', qualifier: '0B', otherId: 'IL-036-99214' },
+        operating: { npi: '1548392012', lastName: 'Reyes', firstName: 'Marisol', qualifier: '', otherId: '' },
+        other: [{ npi: '1346798527', lastName: 'Rostova', firstName: 'Elena', qualifier: '', otherId: '', role: 'referring' }],
+      },
+      lines: UB04_REVENUE_LINES,
+    },
+  };
+}

@@ -29,6 +29,7 @@ import {
   getMockBatchesData,
   getMockProvidersData,
   getMockScheduleData,
+  getMockUb04Detail,
   getMockTodayScheduleData,
   getMockOrganizationData,
   getMockEdiSettingsData,
@@ -48,6 +49,9 @@ function resolveRouteFallback(route: string): any {
     };
   }
   if (route === '/dashboard') return getMockDashboardData();
+  if (route.startsWith('/claims/') && route.endsWith('/ub04')) {
+    return getMockUb04Detail(route.replace('/claims/', '').replace('/ub04', ''));
+  }
   if (route === '/claims') return getMockClaimsData();
   if (route.startsWith('/claims/')) {
     const id = route.replace('/claims/', '').split('/')[0]!;
