@@ -176,9 +176,9 @@ export default async function ProvidersPage({
                     />
                   </td>
                   <td>
-                    <div className="font-medium text-ink">
+                    <Link href={`/settings/providers/${p.id}`} className="font-medium text-ink hover:underline">
                       Dr. {p.firstName} {p.lastName}, <span className="font-semibold text-grove-strong">{p.credentials}</span>
-                    </div>
+                    </Link>
                   </td>
                   <td>
                     <span className="g-mono font-bold text-xs bg-grove-soft text-grove-strong px-2 py-0.5 rounded border border-grove-line">
@@ -225,6 +225,12 @@ export default async function ProvidersPage({
                   </td>
                   <td>
                     <div className="flex items-center justify-end gap-1">
+                      <Link
+                        href={`/settings/providers/${p.id}`}
+                        className="rounded-md border border-line-strong px-2 py-0.5 text-[11px] font-medium text-ink-2 hover:bg-surface-sunken"
+                      >
+                        Full profile
+                      </Link>
                       <EditProviderModal provider={p} practices={practices} />
                       <DeleteProviderButton
                         id={p.id}

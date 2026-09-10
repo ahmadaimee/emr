@@ -3940,3 +3940,310 @@ export function getMockUb04Detail(id: string) {
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Provider credentialing record — the full field set behind the edit page
+// ---------------------------------------------------------------------------
+
+export const PROVIDER_CREDENTIALS = ['MD', 'DO', 'NP', 'PA-C', 'DPM', 'DC', 'DDS', 'OD', 'PsyD', 'PhD', 'LCSW', 'RN', 'CRNA', 'CNM'];
+
+export const BILLING_ROLES = [
+  { value: 'rendering_and_billing', label: 'Rendering & Billing', hint: 'Appears in Box 33 and Box 24J' },
+  { value: 'rendering_only', label: 'Rendering only', hint: 'Box 24J only; bills under the group' },
+  { value: 'billing_only', label: 'Billing only', hint: 'Box 33 only; renders no service' },
+  { value: 'supervising', label: 'Supervising', hint: 'Supervises mid-level providers' },
+  { value: 'referring', label: 'Referring / ordering', hint: 'Box 17 only' },
+];
+
+export const EMPLOYMENT_TYPES = ['Employed', 'Contracted (1099)', 'Locum tenens', 'Per diem', 'Owner / partner'];
+
+export const DEA_SCHEDULES = ['2', '2N', '3', '3N', '4', '5'];
+
+export const LICENSE_STATUSES = ['active', 'pending', 'expired', 'lapsed', 'suspended', 'revoked'];
+
+export const ENROLLMENT_STATUSES = ['enrolled', 'in_process', 'not_enrolled', 'terminated'];
+
+export const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
+
+/** A working subset of the NUCC taxonomy set, enough for a demo practice. */
+export const TAXONOMY_CODES = [
+  { code: '207Q00000X', description: 'Family Medicine Physician' },
+  { code: '207QA0505X', description: 'Family Medicine — Adult Medicine' },
+  { code: '207R00000X', description: 'Internal Medicine Physician' },
+  { code: '207RC0000X', description: 'Internal Medicine — Cardiovascular Disease' },
+  { code: '207RE0101X', description: 'Internal Medicine — Endocrinology' },
+  { code: '208D00000X', description: 'General Practice / Urgent Care' },
+  { code: '207X00000X', description: 'Orthopaedic Surgery Physician' },
+  { code: '207XS0117X', description: 'Orthopaedic Surgery — Sports Medicine' },
+  { code: '208000000X', description: 'Pediatrics Physician' },
+  { code: '207V00000X', description: 'Obstetrics & Gynecology Physician' },
+  { code: '363L00000X', description: 'Nurse Practitioner' },
+  { code: '363A00000X', description: 'Physician Assistant' },
+  { code: '282N00000X', description: 'General Acute Care Hospital' },
+  { code: '261QU0200X', description: 'Clinic/Center — Urgent Care' },
+];
+
+const PROVIDER_DEFAULTS = {
+  prefix: 'Dr.',
+  middleName: '',
+  suffix: '',
+  preferredName: '',
+  gender: 'unspecified',
+  dateOfBirth: '',
+  languages: ['English'],
+
+  groupNpi: '1982736450',
+  taxId: '',
+  taxIdType: 'EI',
+  medicaidId: '',
+  medicaidState: 'IL',
+  medicarePtan: '',
+  caqhId: '',
+  caqhAttestedOn: '',
+  pecosEnrolled: true,
+  pecosRevalidationDate: '',
+  upin: '',
+
+  deaExpiresOn: '',
+  deaSchedules: ['2', '3', '4', '5'],
+  stateCdsNumber: '',
+  stateCdsExpiresOn: '',
+
+  licenseIssuedOn: '',
+  licenseExpiresOn: '',
+  licenseStatus: 'active',
+  boardCertifications: [] as any[],
+
+  secondaryTaxonomies: [] as string[],
+  subspecialties: [] as string[],
+
+  organizationName: 'Orchard Health Systems, LLC',
+  organizationNpi: '1982736450',
+  employmentType: 'Employed',
+  employmentStartDate: '',
+  employmentEndDate: '',
+  supervisingProviderId: '',
+  primaryPracticeId: '',
+  panelSize: 0,
+
+  mobile: '',
+  fax: '',
+  addressLine1: '',
+  addressLine2: '',
+  city: '',
+  state: 'IL',
+  zip: '',
+  county: '',
+
+  defaultPlaceOfService: '11',
+  claimTaxonomyCode: '',
+  box33UsesGroupNpi: true,
+
+  malpracticeCarrier: '',
+  malpracticePolicyNumber: '',
+  malpracticePerOccurrenceCents: 100000000,
+  malpracticeAggregateCents: 300000000,
+  malpracticeExpiresOn: '',
+  hospitalPrivileges: [] as any[],
+  payerEnrollments: [] as any[],
+  cliaNumber: '',
+  oigCheckedOn: '',
+  samCheckedOn: '',
+  stateExclusionCheckedOn: '',
+  npdbQueriedOn: '',
+
+  defaultAppointmentMinutes: 20,
+  room: '',
+  internalNotes: '',
+};
+
+/** Per-provider credentialing detail layered over the roster rows. */
+const PROVIDER_DETAIL_OVERRIDES: Record<string, Record<string, any>> = {
+  'prv-1': {
+    middleName: 'Elliot',
+    gender: 'male',
+    dateOfBirth: '1978-04-12',
+    languages: ['English', 'Spanish'],
+    taxId: '364928190',
+    medicaidId: 'IL-MCD-88213',
+    medicarePtan: 'X9928417',
+    caqhId: '10023841',
+    caqhAttestedOn: '2026-06-02',
+    pecosRevalidationDate: '2028-03-31',
+    deaExpiresOn: '2027-05-31',
+    stateCdsNumber: 'IL-CDS-44821',
+    stateCdsExpiresOn: '2027-05-31',
+    licenseIssuedOn: '2008-07-01',
+    licenseExpiresOn: '2027-07-31',
+    boardCertifications: [
+      { board: 'American Board of Family Medicine', specialty: 'Family Medicine', certifiedOn: '2010-09-15', expiresOn: '2030-12-31' },
+    ],
+    secondaryTaxonomies: ['207QA0505X'],
+    subspecialties: ['Adult Medicine'],
+    employmentType: 'Owner / partner',
+    employmentStartDate: '2015-01-05',
+    primaryPracticeId: 'prac-1',
+    panelSize: 1850,
+    mobile: '(555) 234-9910',
+    fax: '(555) 234-8999',
+    addressLine1: '100 Medical Center Pkwy, Suite 400',
+    city: 'Springfield',
+    zip: '62704-1188',
+    county: 'Sangamon',
+    claimTaxonomyCode: '207Q00000X',
+    malpracticeCarrier: 'MedPro Group',
+    malpracticePolicyNumber: 'MP-2026-88410',
+    malpracticeExpiresOn: '2027-01-31',
+    hospitalPrivileges: [
+      { hospital: 'Springfield Memorial Hospital', status: 'active', expiresOn: '2027-06-30' },
+    ],
+    payerEnrollments: [
+      { payer: 'Medicare Part B', status: 'enrolled', providerNumber: 'X9928417', effectiveOn: '2015-02-01' },
+      { payer: 'Illinois Medicaid', status: 'enrolled', providerNumber: 'IL-MCD-88213', effectiveOn: '2015-03-15' },
+      { payer: 'Blue Cross Blue Shield of Illinois', status: 'enrolled', providerNumber: 'BCBS-44120', effectiveOn: '2015-02-20' },
+      { payer: 'UnitedHealthcare', status: 'in_process', providerNumber: '', effectiveOn: '' },
+    ],
+    oigCheckedOn: '2026-08-01',
+    samCheckedOn: '2026-08-01',
+    stateExclusionCheckedOn: '2026-08-01',
+    npdbQueriedOn: '2026-02-14',
+    defaultAppointmentMinutes: 20,
+    room: 'Room 1-A',
+  },
+  'prv-2': {
+    middleName: 'Anne',
+    gender: 'female',
+    dateOfBirth: '1985-09-27',
+    taxId: '364928190',
+    medicaidId: 'IL-MCD-77120',
+    medicarePtan: 'X9931002',
+    caqhId: '10044219',
+    caqhAttestedOn: '2026-05-18',
+    pecosRevalidationDate: '2029-01-31',
+    deaExpiresOn: '2028-02-29',
+    licenseIssuedOn: '2013-06-15',
+    licenseExpiresOn: '2027-07-31',
+    boardCertifications: [
+      { board: 'American Board of Internal Medicine', specialty: 'Internal Medicine', certifiedOn: '2016-08-01', expiresOn: '2028-12-31' },
+    ],
+    employmentType: 'Employed',
+    employmentStartDate: '2019-04-01',
+    primaryPracticeId: 'prac-1',
+    panelSize: 1320,
+    mobile: '(555) 234-9911',
+    addressLine1: '100 Medical Center Pkwy, Suite 400',
+    city: 'Springfield',
+    zip: '62704-1188',
+    county: 'Sangamon',
+    claimTaxonomyCode: '207R00000X',
+    malpracticeCarrier: 'The Doctors Company',
+    malpracticePolicyNumber: 'TDC-2026-11907',
+    malpracticeExpiresOn: '2026-11-30',
+    payerEnrollments: [
+      { payer: 'Medicare Part B', status: 'enrolled', providerNumber: 'X9931002', effectiveOn: '2019-05-01' },
+      { payer: 'Aetna', status: 'enrolled', providerNumber: 'AET-99120', effectiveOn: '2019-06-10' },
+    ],
+    oigCheckedOn: '2026-08-01',
+    samCheckedOn: '2026-08-01',
+    defaultAppointmentMinutes: 20,
+    room: 'Room 2-C',
+  },
+  'prv-3': {
+    gender: 'female',
+    dateOfBirth: '1981-01-19',
+    languages: ['English', 'Russian'],
+    taxId: '364928190',
+    medicarePtan: 'X9944781',
+    caqhId: '10077315',
+    caqhAttestedOn: '2026-07-09',
+    deaExpiresOn: '2027-09-30',
+    licenseIssuedOn: '2011-03-01',
+    licenseExpiresOn: '2026-10-31',
+    licenseStatus: 'active',
+    employmentType: 'Contracted (1099)',
+    employmentStartDate: '2022-08-15',
+    primaryPracticeId: 'prac-3',
+    mobile: '(555) 678-9016',
+    addressLine1: '77 Westside Ave',
+    city: 'Springfield',
+    zip: '62702-3310',
+    county: 'Sangamon',
+    claimTaxonomyCode: '208D00000X',
+    cliaNumber: '14D0987654',
+    malpracticeCarrier: 'Coverys',
+    malpracticePolicyNumber: 'CVY-2026-55021',
+    malpracticeExpiresOn: '2027-03-31',
+    payerEnrollments: [
+      { payer: 'Medicare Part B', status: 'enrolled', providerNumber: 'X9944781', effectiveOn: '2022-09-01' },
+      { payer: 'Illinois Medicaid', status: 'in_process', providerNumber: '', effectiveOn: '' },
+    ],
+    oigCheckedOn: '2026-07-01',
+    defaultAppointmentMinutes: 15,
+    room: 'Urgent Bay 3',
+  },
+};
+
+/** Merge the roster row with its credentialing detail and the shared defaults. */
+function withProviderDetail(p: any) {
+  return { ...PROVIDER_DEFAULTS, ...(PROVIDER_DETAIL_OVERRIDES[p.id] ?? {}), ...p };
+}
+
+/**
+ * Credentials that expire. Surfaced on the edit page because an expired licence, DEA
+ * registration or malpractice policy stops the provider being billable — the claim is
+ * denied, not merely flagged, and the practice usually finds out weeks later.
+ */
+export function providerExpiryWarnings(p: any, today = new Date()) {
+  const items = [
+    { field: 'licenseExpiresOn', label: 'State licence', value: p.licenseExpiresOn },
+    { field: 'deaExpiresOn', label: 'DEA registration', value: p.deaExpiresOn },
+    { field: 'stateCdsExpiresOn', label: 'State CDS', value: p.stateCdsExpiresOn },
+    { field: 'malpracticeExpiresOn', label: 'Malpractice policy', value: p.malpracticeExpiresOn },
+    ...(p.boardCertifications ?? []).map((b: any, i: number) => ({
+      field: `boardCertifications.${i}`,
+      label: `Board certification — ${b.specialty || b.board}`,
+      value: b.expiresOn,
+    })),
+    ...(p.hospitalPrivileges ?? []).map((h: any, i: number) => ({
+      field: `hospitalPrivileges.${i}`,
+      label: `Privileges — ${h.hospital}`,
+      value: h.expiresOn,
+    })),
+  ];
+
+  const out: any[] = [];
+  for (const it of items) {
+    if (!it.value) continue;
+    const due = new Date(`${it.value}T00:00:00`);
+    const days = Math.round((due.getTime() - today.getTime()) / 86400000);
+    if (days <= 90) out.push({ ...it, days, severity: days < 0 ? 'expired' : days <= 30 ? 'urgent' : 'soon' });
+  }
+  return out.sort((a, b) => a.days - b.days);
+}
+
+export function getMockProviderDetail(id: string) {
+  const p = GLOBAL_PROVIDERS.find((x) => x.id === id);
+  if (!p) return null;
+  const detail = withProviderDetail(p);
+  return {
+    provider: detail,
+    references: getMockProviderReferences(id),
+    warnings: providerExpiryWarnings(detail),
+    practices: GLOBAL_PRACTICES.map((pr) => ({ id: pr.id, name: pr.name })),
+    colleagues: GLOBAL_PROVIDERS.filter((x) => x.id !== id).map((x) => ({
+      id: x.id,
+      name: `Dr. ${x.firstName} ${x.lastName}, ${x.credentials}`,
+    })),
+    reference: {
+      credentials: PROVIDER_CREDENTIALS,
+      billingRoles: BILLING_ROLES,
+      employmentTypes: EMPLOYMENT_TYPES,
+      deaSchedules: DEA_SCHEDULES,
+      licenseStatuses: LICENSE_STATUSES,
+      enrollmentStatuses: ENROLLMENT_STATUSES,
+      states: US_STATES,
+      taxonomies: TAXONOMY_CODES,
+      statuses: PROVIDER_STATUSES,
+    },
+  };
+}

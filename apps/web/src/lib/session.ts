@@ -28,6 +28,7 @@ import {
   getMockClaimStatusData,
   getMockBatchesData,
   getMockProvidersData,
+  getMockProviderDetail,
   getMockScheduleData,
   getMockUb04Detail,
   getMockTodayScheduleData,
@@ -91,6 +92,9 @@ function resolveRouteFallback(route: string): any {
   if (route === '/settings/automation') return getMockAutomationSettings();
   if (route === '/settings/rules') return getMockRulesData();
   if (route === '/settings/fee-schedules') return getMockFeeSchedulesData();
+  if (route.startsWith('/settings/providers/')) {
+    return getMockProviderDetail(route.replace('/settings/providers/', '').split('/')[0]!) ?? {};
+  }
   if (route === '/settings/providers') return getMockProvidersData();
   if (route === '/settings/organization') return getMockOrganizationData();
   if (route === '/settings/edi') return getMockEdiSettingsData();

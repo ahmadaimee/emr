@@ -127,3 +127,67 @@ export async function deleteProviderAction(id: string): Promise<ActionResult> {
   revalidatePath('/schedule');
   return { ok: true };
 }
+
+/**
+ * The full credentialing record, saved from the provider edit page. Unlike the quick
+ * inline edit this accepts every field, so it validates the ones a payer will reject on
+ * rather than trusting the form.
+ */
+export async function saveProviderAction(id: string, patch: Record<string, any>): Promise<ActionResult> {
+  if (!String(patch.firstName ?? '').trim() || !String(patch.lastName ?? '').trim()) {
+    return { ok: false, error: 'First and last name are required.' };
+  }
+
+  const npi = String(patch.npi ?? '').trim();
+  if (!isValidNpi(npi)) {
+    return { ok: false, error: `${npi || 'NPI'} is not a valid NPI — the check digit does not match.` };
+  }
+  // The group NPI goes in box 33 on every claim this provider bills, so it gets the
+  // same check rather than being trusted because it is "just" a reference.
+  const groupNpi = String(patch.groupNpi ?? '').trim();
+  if (groupNpi && !isValidNpi(groupNpi)) {
+    return { ok: false, error: `${groupNpi} is not a valid group NPI — the check digit does not match.` };
+  }
+
+  const taxId = String(patch.taxId ?? '').replace(/\D/g, '');
+  if (taxId && taxId.length !== 9) {
+    return { ok: false, error: 'A federal tax ID is nine digits.' };
+  }
+
+  // A DEA number is two letters then seven digits, and the last digit is a checksum.
+  const dea = String(patch.deaNumber ?? '').trim().toUpperCase();
+  if (dea && !isValidDea(dea)) {
+    return { ok: false, error: `${dea} is not a valid DEA number — check the format and the last digit.` };
+  }
+
+  if (patch.employmentEndDate && patch.employmentStartDate && patch.employmentEndDate < patch.employmentStartDate) {
+    return { ok: false, error: 'The employment end date cannot precede the start date.' };
+  }
+
+  updateMockProvider(id, { ...patch, npi, groupNpi, taxId, deaNumber: dea });
+
+  await audit('/settings/providers', 'update', id, {
+    npi,
+    billingRole: patch.billingRole,
+    licenseExpiresOn: patch.licenseExpiresOn,
+    deaExpiresOn: patch.deaExpiresOn,
+    fields: Object.keys(patch).length,
+  });
+
+  revalidatePath('/settings/providers');
+  revalidatePath(`/settings/providers/${id}`);
+  revalidatePath('/schedule');
+  return { ok: true };
+}
+
+/**
+ * DEA check digit: sum digits 1,3,5 plus twice the sum of digits 2,4,6; the last digit
+ * of that total is the check digit. The first letter identifies the registrant type and
+ * the second is the registrant's last initial, which is not verified here.
+ */
+function isValidDea(dea: string): boolean {
+  if (!/^[A-Z]{2}\d{7}$/.test(dea)) return false;
+  const d = dea.slice(2).split('').map(Number);
+  const sum = d[0]! + d[2]! + d[4]! + 2 * (d[1]! + d[3]! + d[5]!);
+  return sum % 10 === d[6]!;
+}
