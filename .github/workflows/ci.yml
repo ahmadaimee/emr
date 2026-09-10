@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: grove
+          POSTGRES_PASSWORD: grove_local_dev
+          POSTGRES_DB: grove
+          POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U grove -d grove"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://grove_app:grove_local_dev@localhost:5432/grove
+      DATABASE_MIGRATION_URL: postgres://grove:grove_local_dev@localhost:5432/grove
+      AUDIT_CHAIN_SECRET: ci-only-not-a-secret
+      PHI_ENCRYPTION_KEY: ci-only-not-a-secret
+      AUTH_SECRET: ci-only-not-a-secret
+      CLEARINGHOUSE_PROVIDER: mock
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Bootstrap database roles and extensions
+        run: psql "$DATABASE_MIGRATION_URL" -f infra/postgres/init/01-extensions.sql
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Migrate
+        run: pnpm db:migrate
+
+      - name: Tenant isolation gate
+        run: pnpm db:check-rls
+
+      - name: Unit and integration tests
+        run: pnpm test
+
+      - name: Seed (proves the seed script runs clean)
+        run: pnpm db:seed

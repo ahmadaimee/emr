@@ -1,0 +1,62 @@
+# Local development infrastructure for Grove.
+#
+# Deliberately NO Redis. Job queues run on pg-boss inside Postgres, because queue
+# payloads carry claim and patient identifiers — putting those in Redis would create a
+# second PHI datastore with its own encryption, backup, BAA and breach-scope obligations
+# for no benefit. One datastore for PHI, full stop.
+#
+# Nothing here is production configuration — production runs managed Postgres with
+# encryption at rest, private networking, PITR, and a signed BAA with the provider.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: grove-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: grove
+      POSTGRES_PASSWORD: grove_local_dev
+      POSTGRES_DB: grove
+      # Deterministic collation so index behaviour matches production.
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grove -d grove"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: grove-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: grove
+      MINIO_ROOT_PASSWORD: grove_local_dev
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: grove-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  postgres_data:
+  minio_data:

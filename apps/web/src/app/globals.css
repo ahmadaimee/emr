@@ -1,0 +1,107 @@
+@import 'tailwindcss';
+@import '@grove/ui/tokens.css';
+
+/* Expose Grove tokens as Tailwind utilities: bg-surface, text-ink-2, border-line, ... */
+@theme inline {
+  --color-surface: var(--g-surface);
+  --color-surface-raised: var(--g-surface-raised);
+  --color-surface-sunken: var(--g-surface-sunken);
+  --color-line: var(--g-line);
+  --color-line-strong: var(--g-line-strong);
+  --color-ink: var(--g-ink);
+  --color-ink-2: var(--g-ink-2);
+  --color-ink-3: var(--g-ink-3);
+  --color-ink-4: var(--g-ink-4);
+  --color-ink-inverse: var(--g-ink-inverse);
+  --color-grove: var(--g-grove-500);
+  --color-grove-strong: var(--g-grove-700);
+  --color-grove-soft: var(--g-grove-50);
+  --color-grove-line: var(--g-grove-100);
+  --color-clay: var(--g-clay-500);
+  --color-clay-soft: var(--g-clay-100);
+  --color-warn: var(--g-warn);
+  --color-warn-soft: var(--g-warn-bg);
+  --color-danger: var(--g-danger);
+  --color-danger-soft: var(--g-danger-bg);
+  --color-info: var(--g-info);
+  --color-info-soft: var(--g-info-bg);
+  --color-ok: var(--g-ok);
+  --color-ok-soft: var(--g-ok-bg);
+
+  --font-display: var(--g-font-display);
+  --font-sans: var(--g-font-ui);
+  --font-mono: var(--g-font-mono);
+
+  --radius-sm: var(--g-radius-sm);
+  --radius-md: var(--g-radius-md);
+  --radius-lg: var(--g-radius-lg);
+
+  --shadow-sm: var(--g-shadow-sm);
+  --shadow-md: var(--g-shadow-md);
+  --shadow-lg: var(--g-shadow-lg);
+}
+
+body {
+  background: var(--g-surface);
+  color: var(--g-ink);
+  font-family: var(--g-font-ui);
+  font-size: var(--g-text-md);
+  line-height: var(--g-leading-normal);
+}
+
+/* Dense data tables. Rows are exactly one row-height; nothing wraps. */
+.g-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--g-text-sm);
+}
+.g-table th {
+  position: sticky;
+  top: 0;
+  background: var(--g-surface);
+  color: var(--g-ink-3);
+  font-weight: 500;
+  text-align: left;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  font-size: var(--g-text-xs);
+  height: var(--g-row-height);
+  padding: 0 var(--g-cell-pad-x);
+  border-bottom: 1px solid var(--g-line);
+  white-space: nowrap;
+}
+.g-table td {
+  height: var(--g-row-height);
+  padding: 0 var(--g-cell-pad-x);
+  border-bottom: 1px solid var(--g-line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 28rem;
+}
+.g-table tbody tr:hover td {
+  background: var(--g-surface-sunken);
+}
+.g-table tbody tr[data-selected='true'] td {
+  background: var(--g-grove-50);
+}
+.g-table tbody tr:focus-visible {
+  outline: none;
+}
+.g-table tbody tr:focus-visible td:first-child {
+  box-shadow: inset 3px 0 0 var(--g-grove-500);
+}
+
+/* Keyboard hint chips. */
+.g-kbd {
+  display: inline-block;
+  font-family: var(--g-font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid var(--g-line-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--g-radius-sm);
+  color: var(--g-ink-3);
+  background: var(--g-surface-raised);
+}

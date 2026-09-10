@@ -1,0 +1,12 @@
+export { PERMISSIONS, STEP_UP_REQUIRED, isKnownPermission } from './permissions';
+export type { Permission, Resource, Action } from './permissions';
+export { can, assertCan, ForbiddenError } from './rbac';
+export type { Actor, Grant, Elevation, ResourceScope, Decision } from './rbac';
+export { hashPassword, verifyPassword } from './password';
+export { generateTotpSecret, verifyTotp, generateRecoveryCodes, encryptSecret, decryptSecret } from './totp';
+export { createSession, resolveSession, revokeSession, revokeAllSessions, hashToken } from './session';
+export type { ResolvedSession } from './session';
+export { createApiKey, resolveApiKey, KEY_PREFIX } from './api-key';
+export type { ResolvedApiKey } from './api-key';
+export { login, verifyMfa, stepUp } from './login';
+export type { LoginResult } from './login';

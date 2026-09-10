@@ -1,0 +1,250 @@
+/*
+ * Grove design tokens.
+ *
+ * Governing rule: COLOR MARKS EXCEPTIONS, NOT NORMAL STATE.
+ * Money is always ink. A clean claim is visually silent. Only variance gets a hue.
+ *
+ * Warm neutrals, one confident brand green, one warm accent. No healthcare cyan.
+ * Light palette on :root; dark redefines only the tokens, guarded so an explicit
+ * data-theme wins over the system preference in both directions.
+ */
+
+:root {
+  /* --- Surfaces & ink (warm neutral ramp) ---------------------------------- */
+  --g-surface:          #faf9f7;
+  --g-surface-raised:   #ffffff;
+  --g-surface-sunken:   #f3f1ed;
+  --g-surface-overlay:  rgba(250, 249, 247, 0.92);
+  --g-line:             #e6e2db;
+  --g-line-strong:      #cfc9bf;
+
+  --g-ink:              #1c1b18;
+  --g-ink-2:            #4a4741;
+  --g-ink-3:            #7a766e;
+  --g-ink-4:            #a6a198;
+  --g-ink-inverse:      #faf9f7;
+
+  /* --- Brand: Grove green. Nav, brand, primary action ONLY. ---------------- */
+  --g-grove-50:         #eef4f0;
+  --g-grove-100:        #d5e5da;
+  --g-grove-300:        #7fa88f;
+  --g-grove-500:        #2f6b4f;
+  --g-grove-600:        #245640;
+  --g-grove-700:        #1f4d3d;
+  --g-grove-800:        #163a2e;
+
+  /* --- Accent: clay. Highlight and attention, never an error. ------------- */
+  --g-clay-100:         #f6e4d9;
+  --g-clay-500:         #b4562f;
+  --g-clay-600:         #9a4826;
+
+  /* --- Semantics, desaturated. Exceptions only. --------------------------- */
+  --g-warn-bg:          #fbf1dc;
+  --g-warn:             #9a6a12;
+  --g-warn-strong:      #7a5309;
+
+  --g-danger-bg:        #f8e5e2;
+  --g-danger:           #a3392c;
+  --g-danger-strong:    #832d22;
+
+  --g-info-bg:          #e8ecef;
+  --g-info:             #4f5f6b;
+
+  --g-ok-bg:            #e6f0ea;
+  --g-ok:               #2f6b4f;
+
+  /* --- Focus ---------------------------------------------------------------- */
+  --g-focus:            #2f6b4f;
+  --g-focus-ring:       0 0 0 2px var(--g-surface), 0 0 0 4px var(--g-focus);
+
+  /* --- Type ----------------------------------------------------------------- */
+  --g-font-display:     "Instrument Sans", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --g-font-ui:          "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --g-font-mono:        "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --g-text-xs:          0.75rem;
+  --g-text-sm:          0.8125rem;
+  --g-text-md:          0.875rem;
+  --g-text-lg:          1rem;
+  --g-text-xl:          1.25rem;
+  --g-text-2xl:         1.5rem;
+  --g-text-3xl:         2rem;
+
+  --g-leading-tight:    1.2;
+  --g-leading-normal:   1.45;
+
+  /* --- Space (4px base) --------------------------------------------------- */
+  --g-space-1:          0.25rem;
+  --g-space-2:          0.5rem;
+  --g-space-3:          0.75rem;
+  --g-space-4:          1rem;
+  --g-space-5:          1.25rem;
+  --g-space-6:          1.5rem;
+  --g-space-8:          2rem;
+  --g-space-10:         2.5rem;
+  --g-space-12:         3rem;
+
+  /* --- Density. Compact is the default for billing roles. ----------------- */
+  --g-row-height:       2.25rem;
+  --g-control-height:   2rem;
+  --g-cell-pad-x:       0.625rem;
+
+  /* --- Shape & elevation -------------------------------------------------- */
+  --g-radius-sm:        0.25rem;
+  --g-radius-md:        0.375rem;
+  --g-radius-lg:        0.625rem;
+  --g-shadow-sm:        0 1px 2px rgba(28, 27, 24, 0.06);
+  --g-shadow-md:        0 4px 12px rgba(28, 27, 24, 0.08), 0 1px 3px rgba(28, 27, 24, 0.05);
+  --g-shadow-lg:        0 16px 40px rgba(28, 27, 24, 0.12), 0 2px 6px rgba(28, 27, 24, 0.06);
+
+  /* --- Motion: brief and never decorative --------------------------------- */
+  --g-ease:             cubic-bezier(0.2, 0, 0, 1);
+  --g-dur-fast:         120ms;
+  --g-dur-normal:       180ms;
+
+  color-scheme: light;
+}
+
+[data-density="comfortable"] {
+  --g-row-height:       2.75rem;
+  --g-control-height:   2.375rem;
+  --g-cell-pad-x:       0.875rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --g-surface:          #171614;
+    --g-surface-raised:   #1f1e1b;
+    --g-surface-sunken:   #121110;
+    --g-surface-overlay:  rgba(23, 22, 20, 0.92);
+    --g-line:             #2c2a26;
+    --g-line-strong:      #3d3a35;
+
+    --g-ink:              #ece9e3;
+    --g-ink-2:            #bdb8af;
+    --g-ink-3:            #8d887f;
+    --g-ink-4:            #625e57;
+    --g-ink-inverse:      #171614;
+
+    --g-grove-50:         #182c23;
+    --g-grove-100:        #1f3a2e;
+    --g-grove-300:        #3f7a5d;
+    --g-grove-500:        #5f9f7f;
+    --g-grove-600:        #7ab596;
+    --g-grove-700:        #96c8ad;
+    --g-grove-800:        #b8dcc7;
+
+    --g-clay-100:         #3a241a;
+    --g-clay-500:         #d47a52;
+    --g-clay-600:         #e3906c;
+
+    --g-warn-bg:          #2e2612;
+    --g-warn:             #d9a63f;
+    --g-warn-strong:      #e8ba5c;
+
+    --g-danger-bg:        #34201d;
+    --g-danger:           #d86f5f;
+    --g-danger-strong:    #e5877a;
+
+    --g-info-bg:          #22282c;
+    --g-info:             #9aabb7;
+
+    --g-ok-bg:            #1a2b22;
+    --g-ok:               #7ab596;
+
+    --g-focus:            #7ab596;
+    --g-shadow-sm:        0 1px 2px rgba(0, 0, 0, 0.4);
+    --g-shadow-md:        0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --g-shadow-lg:        0 16px 40px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --g-surface:          #171614;
+  --g-surface-raised:   #1f1e1b;
+  --g-surface-sunken:   #121110;
+  --g-surface-overlay:  rgba(23, 22, 20, 0.92);
+  --g-line:             #2c2a26;
+  --g-line-strong:      #3d3a35;
+
+  --g-ink:              #ece9e3;
+  --g-ink-2:            #bdb8af;
+  --g-ink-3:            #8d887f;
+  --g-ink-4:            #625e57;
+  --g-ink-inverse:      #171614;
+
+  --g-grove-50:         #182c23;
+  --g-grove-100:        #1f3a2e;
+  --g-grove-300:        #3f7a5d;
+  --g-grove-500:        #5f9f7f;
+  --g-grove-600:        #7ab596;
+  --g-grove-700:        #96c8ad;
+  --g-grove-800:        #b8dcc7;
+
+  --g-clay-100:         #3a241a;
+  --g-clay-500:         #d47a52;
+  --g-clay-600:         #e3906c;
+
+  --g-warn-bg:          #2e2612;
+  --g-warn:             #d9a63f;
+  --g-warn-strong:      #e8ba5c;
+
+  --g-danger-bg:        #34201d;
+  --g-danger:           #d86f5f;
+  --g-danger-strong:    #e5877a;
+
+  --g-info-bg:          #22282c;
+  --g-info:             #9aabb7;
+
+  --g-ok-bg:            #1a2b22;
+  --g-ok:               #7ab596;
+
+  --g-focus:            #7ab596;
+  --g-shadow-sm:        0 1px 2px rgba(0, 0, 0, 0.4);
+  --g-shadow-md:        0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --g-shadow-lg:        0 16px 40px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
+}
+
+/* --- Base --------------------------------------------------------------------- */
+
+html {
+  font-family: var(--g-font-ui);
+  font-size: 16px;
+  color: var(--g-ink);
+  background: var(--g-surface);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Every number in a grid lines up. No exceptions. */
+.g-num,
+[data-numeric],
+td[data-type="money"],
+td[data-type="number"] {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.g-mono,
+[data-code] {
+  font-family: var(--g-font-mono);
+  font-size: 0.9em;
+  letter-spacing: 0.01em;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--g-focus-ring);
+  border-radius: var(--g-radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --g-dur-fast: 0ms;
+    --g-dur-normal: 0ms;
+  }
+}

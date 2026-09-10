@@ -1,0 +1,19 @@
+import { hash, verify, Algorithm } from '@node-rs/argon2';
+
+/**
+ * Argon2id with parameters above the OWASP minimum. Never bcrypt, never a fast hash.
+ */
+const PARAMS = { algorithm: Algorithm.Argon2id, memoryCost: 65_536, timeCost: 3, parallelism: 2 } as const;
+
+export async function hashPassword(password: string): Promise<string> {
+  if (password.length < 12) throw new Error('Password must be at least 12 characters');
+  return hash(password, PARAMS);
+}
+
+export async function verifyPassword(passwordHash: string, password: string): Promise<boolean> {
+  try {
+    return await verify(passwordHash, password);
+  } catch {
+    return false;
+  }
+}
