@@ -40,7 +40,31 @@ export function HcfaFormViewer({
   const paidCents = c.paidCents || 0;
   const balanceCents = totalChargeCents - paidCents;
 
-  const dxCodes: string[] = c.diagnosisCodes && c.diagnosisCodes.length > 0 ? c.diagnosisCodes : ['M54.5', 'M25.561'];
+  // NUCC item 21: codes are entered without a decimal point — the boxes have no
+  // position for one, and OCR reads the extra character as part of the code.
+  const dxCodes: string[] = (c.diagnosisCodes && c.diagnosisCodes.length > 0 ? c.diagnosisCodes : ['M54.5', 'M25.561']).map(
+    (d: string) => d.replace('.', ''),
+  );
+
+  // Items 14–20. Item 14 accepts only 431 (onset) and 484 (LMP) — an accident date is
+  // 439 and belongs in item 15, so the two are derived separately rather than sharing
+  // the service date.
+  const mmddyy = (iso?: string) => (iso ? `${iso.slice(5, 7)} ${iso.slice(8, 10)} ${iso.slice(2, 4)}` : '');
+  const item14 = c.onsetDate
+    ? { qual: '431', date: mmddyy(c.onsetDate) }
+    : c.lastMenstrualPeriod
+      ? { qual: '484', date: mmddyy(c.lastMenstrualPeriod) }
+      : null;
+  const OTHER_DATES: Array<[string, string]> = [
+    ['accidentDate', '439'],
+    ['initialTreatmentDate', '454'],
+    ['lastXrayDate', '455'],
+    ['lastSeenDate', '304'],
+  ];
+  const otherPair = OTHER_DATES.find(([k]) => c[k]);
+  const item15 = otherPair ? { qual: otherPair[1], date: mmddyy(c[otherPair[0]]) } : null;
+  const outsideLab = Boolean(c.outsideLab?.performed);
+  const outsideLabCharges = c.outsideLab?.chargesCents ?? 0;
 
   const isRed = viewMode === 'standard_red';
   const borderColor = isRed ? 'border-red-600' : 'border-transparent';
@@ -445,10 +469,13 @@ export function HcfaFormViewer({
               14. DATE OF CURRENT ILLNESS / INJURY / LMP
             </span>
             <div className="font-mono font-bold text-[10px] text-neutral-950 mt-0.5">
-              QUAL: 431 · {c.serviceDateFrom || '2026-03-01'}
+              {item14 ? `QUAL: ${item14.qual} · ${item14.date}` : ' '}
             </div>
             <div className="border-t border-red-300 mt-1 pt-0.5">
               <span className={`text-[8px] font-black uppercase ${labelColor}`}>15. OTHER DATE</span>
+              <div className="font-mono font-bold text-[10px] text-neutral-950">
+                {item15 ? `QUAL: ${item15.qual} · ${item15.date}` : ' '}
+              </div>
             </div>
           </div>
 
@@ -460,13 +487,18 @@ export function HcfaFormViewer({
               {doc.lastName || 'VANCE'}, {doc.firstName || 'MARCUS'} MD
             </div>
             <div className="flex justify-between items-center border-t border-red-300 mt-1 pt-0.5">
-              <span className={`text-[8px] font-bold ${labelColor}`}>17a. QUAL:</span>
+              <span className={`text-[8px] font-bold ${labelColor}`}>
+                17a. QUAL: <span className="font-mono text-neutral-950">{c.referringProviderRole || 'DN'}</span>
+              </span>
               <span className="font-mono text-[9px] font-bold">17b. NPI: {doc.npi || prc.npi || '1487654323'}</span>
             </div>
             <div className="border-t border-red-300 mt-1 pt-0.5">
               <span className={`text-[8px] font-black uppercase ${labelColor}`}>
                 19. ADDITIONAL CLAIM INFORMATION (Designated by NUCC)
               </span>
+              <div className="font-mono text-[9px] font-bold uppercase text-neutral-950 truncate">
+                {c.additionalClaimInfo || ' '}
+              </div>
             </div>
           </div>
 
@@ -474,6 +506,11 @@ export function HcfaFormViewer({
             <span className={`text-[8px] font-black uppercase ${labelColor}`}>
               16. DATES PATIENT UNABLE TO WORK
             </span>
+            <div className="font-mono text-[9px] font-bold text-neutral-950">
+              {c.disabilityFrom || c.disabilityTo
+                ? `${mmddyy(c.disabilityFrom)} — ${mmddyy(c.disabilityTo)}`
+                : ' '}
+            </div>
             <div className="border-t border-red-300 mt-1 pt-0.5">
               <span className={`text-[8px] font-black uppercase ${labelColor}`}>
                 18. HOSPITALIZATION DATES
@@ -481,7 +518,11 @@ export function HcfaFormViewer({
             </div>
             <div className="border-t border-red-300 mt-1 pt-0.5 flex justify-between">
               <span className={`text-[8px] font-black uppercase ${labelColor}`}>20. OUTSIDE LAB?</span>
-              <span className="font-mono text-[8px] font-bold">NO [X]</span>
+              <span className="font-mono text-[8px] font-bold">
+                {outsideLab
+                  ? `YES [X] $${(outsideLabCharges / 100).toFixed(2)}`
+                  : 'NO [X]'}
+              </span>
             </div>
           </div>
         </div>

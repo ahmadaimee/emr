@@ -67,6 +67,7 @@ export async function renderCms1500(fields: Cms1500Fields, opts: RenderOptions =
     draw('box7_city', L.box7_city, fields.box7_city);
     draw('box7_state', L.box7_state, fields.box7_state);
     draw('box7_zip', L.box7_zip, fields.box7_zip);
+    draw('box7_phone', L.box7_phone, fields.box7_phone);
     draw('box9', L.box9, fields.box9);
     draw('box9a', L.box9a, fields.box9a);
     draw('box9d', L.box9d, fields.box9d);
@@ -78,17 +79,31 @@ export async function renderCms1500(fields: Cms1500Fields, opts: RenderOptions =
     draw('box11a_dob', L.box11a_dob, fields.box11a_dob);
     check('box11a_m', L.box11a_m, fields.box11a_sex === 'M');
     check('box11a_f', L.box11a_f, fields.box11a_sex === 'F');
+    draw('box11b', L.box11b, [fields.box11b_qual, fields.box11b].filter(Boolean).join(' '));
     draw('box11c', L.box11c, fields.box11c);
     check('box11d', fields.box11d ? L.box11d_y : L.box11d_n, true);
     draw('box12', L.box12, fields.box12);
+    draw('box12_date', L.box12_date, fields.box12_date);
     draw('box13', L.box13, fields.box13);
     draw('box14', L.box14_date, fields.box14);
     draw('box14_qual', L.box14_qual, fields.box14_qual);
+    draw('box15_qual', L.box15_qual, fields.box15_qual);
+    draw('box15', L.box15_date, fields.box15);
+    draw('box16_from', L.box16_from, fields.box16_from);
+    draw('box16_to', L.box16_to, fields.box16_to);
     draw('box17_qual', L.box17_qual, fields.box17_qual);
     draw('box17', L.box17, fields.box17);
+    draw('box17a', L.box17a, [fields.box17a_qual, fields.box17a].filter(Boolean).join(' '));
     draw('box17b', L.box17b, fields.box17b);
     draw('box18_from', L.box18_from, fields.box18_from);
     draw('box18_to', L.box18_to, fields.box18_to);
+    draw('box19', L.box19, fields.box19);
+    // Item 20 is a YES/NO pair: only tick it when there is something to report, since an
+    // unticked pair and a NO tick mean different things to a payer.
+    if (fields.box20 || fields.box20_charges) {
+      check('box20', fields.box20 ? L.box20_y : L.box20_n, true);
+      draw('box20_charges', L.box20_charges, fields.box20_charges);
+    }
     draw('box21_ind', L.box21_ind, fields.box21_icd);
     fields.box21.forEach((code, i) => draw(`box21_${'ABCDEFGHIJKL'[i]}`, L.box21[i]!, code));
     draw('box22_code', L.box22_code, fields.box22_code);
@@ -112,6 +127,7 @@ export async function renderCms1500(fields: Cms1500Fields, opts: RenderOptions =
       draw(`24G_${i}`, row.units, l.units);
       draw(`24H_${i}`, row.epsdt, l.epsdt);
       draw(`24J_${i}`, row.renderingNpi, l.renderingNpi);
+      draw(`24_supplemental_${i}`, row.supplemental, l.supplemental);
     });
 
     draw('box25', L.box25, fields.box25);
@@ -122,6 +138,7 @@ export async function renderCms1500(fields: Cms1500Fields, opts: RenderOptions =
     draw('box28', L.box28, p < pageCount - 1 ? 'CONTINUED' : fields.box28);
     draw('box29', L.box29, p < pageCount - 1 ? '' : fields.box29);
     draw('box31', L.box31, fields.box31);
+    draw('box31_date', L.box31_date, fields.box31_date);
     draw('box32_name', L.box32_name, fields.box32_name);
     draw('box32_addr1', L.box32_addr1, fields.box32_addr1);
     draw('box32_addr2', L.box32_addr2, fields.box32_addr2);

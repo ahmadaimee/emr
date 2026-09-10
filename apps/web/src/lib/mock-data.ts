@@ -251,6 +251,17 @@ export function getMockClaimDetail(id: string) {
         facilityName: 'Orchard Medical Clinic',
         facilityNpi: '1992837462',
         diagnosisCodes: ['M54.5', 'M25.561'],
+        // CMS-1500 items 14-20. Item 14 takes onset (431); the accident date is 439 and
+        // belongs in item 15, which is why the two are stored separately.
+        onsetDate: '2026-02-18',
+        accidentDate: '2026-02-16',
+        initialTreatmentDate: '2026-02-18',
+        disabilityFrom: '2026-02-19',
+        disabilityTo: '2026-03-21',
+        referringProviderRole: 'DN',
+        additionalClaimInfo: 'PT NOTES ON FILE - AUTO ACCIDENT 02/16/2026',
+        otherClaimId: { qualifier: 'Y4', value: 'PC-2026-88410' },
+        outsideLab: { performed: true, chargesCents: 6500 },
         createdAt: new Date(Date.now() - 86400000 * 2),
         ...overrides,
       },

@@ -34,7 +34,8 @@ describe('CMS-1500 mapping', () => {
     expect(f.box3_dob).toBe('01 01 1980');
     expect(f.box4).toBe('SAME');
     expect(f.box6).toBe('self');
-    expect(f.box21).toEqual(['E11.9', 'I10']);
+    // NUCC item 21: the codes are entered without a decimal point.
+    expect(f.box21).toEqual(['E119', 'I10']);
     expect(f.box25).toBe('123456789');
     expect(f.box25_type).toBe('EIN');
     expect(f.box26).toBe('GRV-10041');

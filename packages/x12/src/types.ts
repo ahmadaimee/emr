@@ -61,6 +61,8 @@ export interface Payer {
 export interface Subscriber {
   person: Person;
   memberId: string;
+  /** CMS-1500 item 7 telephone. */
+  phone?: string;
   groupNumber?: string;
   groupName?: string;
   dateOfBirth?: string;
@@ -72,6 +74,8 @@ export interface Subscriber {
 
 export interface Patient {
   person: Person;
+  /** CMS-1500 item 5 telephone. */
+  phone?: string;
   dateOfBirth: string;
   sex: Sex;
   address: Address;
@@ -165,15 +169,41 @@ export interface ProfessionalClaim {
 
   dates?: {
     onset?: string;
+    /** Last menstrual period. CMS-1500 item 14 qualifier 484 / DTP*484. */
+    lastMenstrualPeriod?: string;
     initialTreatment?: string;
     lastSeen?: string;
     accident?: string;
+    /** DTP*455 — last x-ray. CMS-1500 item 15 qualifier 455. */
+    lastXray?: string;
+    /** DTP*090 / DTP*091 — assumed and relinquished care. Item 15 qualifiers 090/091. */
+    assumedCare?: string;
+    relinquishedCare?: string;
     hospitalizedFrom?: string;
     hospitalizedTo?: string;
+    /** DTP*360 / DTP*361 — unable to work in current occupation. CMS-1500 item 16. */
+    disabilityFrom?: string;
+    disabilityTo?: string;
   };
   priorAuthorizationNumber?: string;
   referralNumber?: string;
   cliaNumber?: string;
+  /**
+   * CMS-1500 item 11b, "Other Claim ID (Designated by NUCC)". The only qualifier NUCC
+   * currently designates is Y4, a property-casualty claim number. REF*Y4 in the 837.
+   */
+  otherClaimId?: { qualifier: string; value: string };
+  /** CMS-1500 item 19, "Additional Claim Information (Designated by NUCC)". */
+  additionalClaimInfo?: string;
+  /**
+   * CMS-1500 item 20. YES means the diagnostic work was performed by an outside lab and
+   * is being billed by this provider — a purchased service, not work done in-house.
+   */
+  outsideLab?: { performed: boolean; chargesCents: number };
+  /** CMS-1500 item 17 qualifier: DN referring, DK ordering, DQ supervising. */
+  referringProviderRole?: 'DN' | 'DK' | 'DQ';
+  /** Date the patient/insured signature was obtained. Items 12 and 31. */
+  signatureDate?: string;
   /** NTE*ADD — free-text claim note; use sparingly, payers ignore most of it. */
   note?: string;
 

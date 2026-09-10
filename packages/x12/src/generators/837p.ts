@@ -228,11 +228,23 @@ function claimSegments(c: ProfessionalClaim): Segment[] {
 
   const d = c.dates ?? {};
   if (d.onset) out.push(seg('DTP', '431', 'D8', isoToCcyymmdd(d.onset)));
+  if (d.lastMenstrualPeriod) out.push(seg('DTP', '484', 'D8', isoToCcyymmdd(d.lastMenstrualPeriod)));
   if (d.initialTreatment) out.push(seg('DTP', '454', 'D8', isoToCcyymmdd(d.initialTreatment)));
   if (d.lastSeen) out.push(seg('DTP', '304', 'D8', isoToCcyymmdd(d.lastSeen)));
   if (d.accident) out.push(seg('DTP', '439', 'D8', isoToCcyymmdd(d.accident)));
+  if (d.lastXray) out.push(seg('DTP', '455', 'D8', isoToCcyymmdd(d.lastXray)));
+  if (d.assumedCare) out.push(seg('DTP', '090', 'D8', isoToCcyymmdd(d.assumedCare)));
+  if (d.relinquishedCare) out.push(seg('DTP', '091', 'D8', isoToCcyymmdd(d.relinquishedCare)));
   if (d.hospitalizedFrom) out.push(seg('DTP', '435', 'D8', isoToCcyymmdd(d.hospitalizedFrom)));
   if (d.hospitalizedTo) out.push(seg('DTP', '096', 'D8', isoToCcyymmdd(d.hospitalizedTo)));
+  // Unable to work in the current occupation — the electronic form of CMS-1500 item 16.
+  if (d.disabilityFrom && d.disabilityTo) {
+    out.push(seg('DTP', '360', 'RD8', `${isoToCcyymmdd(d.disabilityFrom)}-${isoToCcyymmdd(d.disabilityTo)}`));
+  } else if (d.disabilityFrom) {
+    out.push(seg('DTP', '360', 'D8', isoToCcyymmdd(d.disabilityFrom)));
+  } else if (d.disabilityTo) {
+    out.push(seg('DTP', '361', 'D8', isoToCcyymmdd(d.disabilityTo)));
+  }
 
   // Frequency 7/8 MUST carry the payer's original claim number or it is treated as a
   // duplicate original and denied.
@@ -245,7 +257,11 @@ function claimSegments(c: ProfessionalClaim): Segment[] {
   if (c.priorAuthorizationNumber) out.push(seg('REF', 'G1', c.priorAuthorizationNumber));
   if (c.referralNumber) out.push(seg('REF', '9F', c.referralNumber));
   if (c.cliaNumber) out.push(seg('REF', 'X4', c.cliaNumber));
-  if (c.note) out.push(seg('NTE', 'ADD', c.note.slice(0, 80)));
+  // CMS-1500 item 11b. Y4 is the property-casualty claim number.
+  if (c.otherClaimId) out.push(seg('REF', c.otherClaimId.qualifier, c.otherClaimId.value));
+  // Item 19 is free text designated by NUCC; on the wire it is the claim note.
+  const note = c.note ?? c.additionalClaimInfo;
+  if (note) out.push(seg('NTE', 'ADD', note.slice(0, 80)));
 
   // HI — diagnoses. ABK = principal, ABF = other. Up to 12. No decimal points.
   if (c.diagnoses.length === 0) throw new Error(`Claim ${c.patientControlNumber}: at least one diagnosis is required`);

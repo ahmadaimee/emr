@@ -22,6 +22,7 @@ export interface Cms1500Fields {
   box7_city: string;
   box7_state: string;
   box7_zip: string;
+  box7_phone: string;
   box9: string;
   box9a: string;
   box9d: string;
@@ -32,17 +33,31 @@ export interface Cms1500Fields {
   box11: string;
   box11a_dob: string;
   box11a_sex: 'M' | 'F' | '';
+  box11b: string;
+  box11b_qual: string;
   box11c: string;
   box11d: boolean;
   box12: 'SIGNATURE ON FILE' | '';
+  box12_date: string;
   box13: 'SIGNATURE ON FILE' | '';
   box14: string;
-  box14_qual: string;
+  /** Item 14 accepts only 431 (onset) and 484 (LMP). */
+  box14_qual: '431' | '484' | '';
+  box15: string;
+  box15_qual: string;
+  box16_from: string;
+  box16_to: string;
   box17: string;
+  /** DN referring, DK ordering, DQ supervising. */
   box17_qual: string;
+  box17a: string;
+  box17a_qual: string;
   box17b: string;
   box18_from: string;
   box18_to: string;
+  box19: string;
+  box20: boolean;
+  box20_charges: string;
   box21_icd: '0';
   box21: string[]; // up to 12, A–L
   box22_code: string;
@@ -50,6 +65,8 @@ export interface Cms1500Fields {
   box23: string;
   box24: Array<{
     from: string; to: string; pos: string; emg: string; cpt: string; mods: string[]; pointer: string; charge: string; units: string; epsdt: string; renderingNpi: string;
+    /** Shaded supplemental row — NDC for drug lines, per NUCC item 24 guidance. */
+    supplemental: string;
   }>;
   box25: string;
   box25_type: 'SSN' | 'EIN';
@@ -58,6 +75,7 @@ export interface Cms1500Fields {
   box28: string;
   box29: string;
   box31: string;
+  box31_date: string;
   box32_name: string;
   box32_addr1: string;
   box32_addr2: string;
@@ -73,6 +91,20 @@ const mmddyyyy = (iso?: string) => (iso ? `${iso.slice(5, 7)} ${iso.slice(8, 10)
 const mmddyy = (iso?: string) => (iso ? `${iso.slice(5, 7)} ${iso.slice(8, 10)} ${iso.slice(2, 4)}` : '');
 const dollars = (cents: number) => `${Math.floor(cents / 100)} ${String(cents % 100).padStart(2, '0')}`;
 const LETTERS = 'ABCDEFGHIJKL';
+
+/**
+ * Item 15 holds ONE "other date" with its qualifier. The claim may carry several, so
+ * they are tried in the order a payer is most likely to need. Accident leads because
+ * item 14 cannot hold it: NUCC restricts item 14 to 431 and 484.
+ */
+const OTHER_DATE_ORDER: Array<[keyof NonNullable<ProfessionalClaim['dates']>, string]> = [
+  ['accident', '439'],
+  ['initialTreatment', '454'],
+  ['lastXray', '455'],
+  ['lastSeen', '304'],
+  ['assumedCare', '090'],
+  ['relinquishedCare', '091'],
+];
 
 export function claimToCms1500(c: ProfessionalClaim, opts: { priorPaidCents?: number; phone?: string } = {}): Cms1500Fields {
   const cfi = c.payer.claimFilingIndicator;
@@ -94,12 +126,13 @@ export function claimToCms1500(c: ProfessionalClaim, opts: { priorPaidCents?: nu
     box5_city: patient.address.city,
     box5_state: patient.address.state,
     box5_zip: patient.address.postalCode,
-    box5_phone: opts.phone ?? '',
+    box5_phone: patient.phone ?? opts.phone ?? '',
     box6: rel === '18' ? 'self' : rel === '01' ? 'spouse' : rel === '19' ? 'child' : 'other',
     box7_street: rel === '18' ? 'SAME' : c.subscriber.address?.line1 ?? '',
     box7_city: rel === '18' ? '' : c.subscriber.address?.city ?? '',
     box7_state: rel === '18' ? '' : c.subscriber.address?.state ?? '',
     box7_zip: rel === '18' ? '' : c.subscriber.address?.postalCode ?? '',
+    box7_phone: rel === '18' ? '' : c.subscriber.phone ?? '',
     box9: other ? name(other.person) : '',
     box9a: other?.groupNumber ?? '',
     box9d: other?.payer.name ?? '',
@@ -110,19 +143,35 @@ export function claimToCms1500(c: ProfessionalClaim, opts: { priorPaidCents?: nu
     box11: c.subscriber.groupNumber ?? 'NONE',
     box11a_dob: rel === '18' ? '' : mmddyyyy(c.subscriber.dateOfBirth),
     box11a_sex: rel === '18' ? '' : c.subscriber.sex === 'M' || c.subscriber.sex === 'F' ? c.subscriber.sex : '',
+    box11b: c.otherClaimId?.value ?? '',
+    box11b_qual: c.otherClaimId?.qualifier ?? '',
     box11c: c.subscriber.groupName ?? c.payer.name,
     box11d: Boolean(other),
     box12: c.releaseOfInformation === 'Y' || c.releaseOfInformation === 'I' ? 'SIGNATURE ON FILE' : '',
+    box12_date: mmddyy(c.signatureDate),
     box13: c.benefitsAssigned ? 'SIGNATURE ON FILE' : '',
-    box14: mmddyy(c.dates?.onset ?? c.dates?.accident),
-    box14_qual: c.dates?.onset ? '431' : c.dates?.accident ? '439' : '',
-    box17: c.referringProvider?.person ? `${c.referringProvider.person.firstName} ${c.referringProvider.person.lastName}` : '',
-    box17_qual: c.referringProvider ? 'DN' : '',
-    box17b: c.referringProvider?.npi ?? '',
+    // Item 14 takes the onset of the current illness, or the LMP for a pregnancy claim.
+    // It accepts no other qualifier — an accident date belongs in item 15.
+    box14: mmddyy(c.dates?.onset ?? c.dates?.lastMenstrualPeriod),
+    box14_qual: c.dates?.onset ? '431' : c.dates?.lastMenstrualPeriod ? '484' : '',
+    box15: mmddyy(otherDate(c)?.[0]),
+    box15_qual: otherDate(c)?.[1] ?? '',
+    box16_from: mmddyy(c.dates?.disabilityFrom),
+    box16_to: mmddyy(c.dates?.disabilityTo),
+    box17: referralSource(c)?.name ?? '',
+    box17_qual: referralSource(c)?.qualifier ?? '',
+    box17a: referralSource(c)?.otherId?.value ?? '',
+    box17a_qual: referralSource(c)?.otherId?.qualifier ?? '',
+    box17b: referralSource(c)?.npi ?? '',
     box18_from: mmddyy(c.dates?.hospitalizedFrom),
     box18_to: mmddyy(c.dates?.hospitalizedTo),
+    box19: c.additionalClaimInfo ?? '',
+    box20: Boolean(c.outsideLab?.performed),
+    box20_charges: c.outsideLab?.performed ? dollars(c.outsideLab.chargesCents) : '',
     box21_icd: '0',
-    box21: c.diagnoses.slice(0, 12).map((d) => (d.length > 3 ? `${d.slice(0, 3)}.${d.slice(3)}` : d)),
+    // NUCC item 21: "Do not include the decimal point." The boxes have no position for
+    // one, and OCR reads the extra character as part of the code.
+    box21: c.diagnoses.slice(0, 12).map((d) => d.replace('.', '')),
     box22_code: c.frequencyCode === '7' ? '7' : c.frequencyCode === '8' ? '8' : '',
     box22_ref: c.originalPayerClaimControlNumber ?? '',
     box23: c.priorAuthorizationNumber ?? c.referralNumber ?? c.cliaNumber ?? '',
@@ -137,11 +186,14 @@ export function claimToCms1500(c: ProfessionalClaim, opts: { priorPaidCents?: nu
       cpt: l.procedureCode,
       mods: l.modifiers.slice(0, 4),
       // Box 24E takes LETTERS; the 837 takes numbers. The model stores numbers.
-      pointer: l.diagnosisPointers.map((p) => LETTERS[p - 1] ?? '').join(''),
+      // The box holds at most four, same as SV107.
+      pointer: l.diagnosisPointers.slice(0, 4).map((p) => LETTERS[p - 1] ?? '').join(''),
       charge: dollars(l.chargeCents),
       units: String(l.units),
       epsdt: l.epsdt ? 'Y' : '',
       renderingNpi: l.renderingProvider?.npi ?? c.renderingProvider?.npi ?? bill.npi,
+      // Shaded row above the line: NDC for drug lines, as N4 + code + quantity.
+      supplemental: l.ndc ? `N4${l.ndc.code} ${l.ndc.unit}${l.ndc.quantity}` : '',
     })),
     box25: bill.taxId ?? '',
     box25_type: bill.taxIdType === 'SY' ? 'SSN' : 'EIN',
@@ -150,6 +202,7 @@ export function claimToCms1500(c: ProfessionalClaim, opts: { priorPaidCents?: nu
     box28: dollars(c.totalChargeCents),
     box29: dollars(opts.priorPaidCents ?? other?.paidAmountCents ?? 0),
     box31: 'SIGNATURE ON FILE',
+    box31_date: mmddyy(c.signatureDate),
     box32_name: c.serviceFacility?.organization?.name ?? bill.organization?.name ?? '',
     box32_addr1: c.serviceFacility?.address?.line1 ?? bill.address?.line1 ?? '',
     box32_addr2: cityLine(c.serviceFacility?.address ?? bill.address),
@@ -159,6 +212,35 @@ export function claimToCms1500(c: ProfessionalClaim, opts: { priorPaidCents?: nu
     box33_addr2: cityLine(bill.address),
     box33_phone: bill.contact?.phone ?? '',
     box33a: bill.npi,
+  };
+}
+
+/** The first "other date" the claim carries, with the qualifier item 15 expects. */
+function otherDate(c: ProfessionalClaim): [string, string] | undefined {
+  const d = c.dates;
+  if (!d) return undefined;
+  for (const [key, qualifier] of OTHER_DATE_ORDER) {
+    const value = d[key];
+    if (typeof value === 'string' && value) return [value, qualifier];
+  }
+  return undefined;
+}
+
+/**
+ * Item 17 names ONE source with a qualifier. A referring provider is reported ahead of a
+ * supervising one, because that is what the payer adjudicates against; an explicit
+ * `referringProviderRole` overrides the guess (DK, ordering, has no separate loop here).
+ */
+function referralSource(c: ProfessionalClaim) {
+  const provider = c.referringProvider ?? c.supervisingProvider;
+  if (!provider) return undefined;
+  const qualifier = c.referringProviderRole ?? (c.referringProvider ? 'DN' : 'DQ');
+  const secondary = provider.secondaryIds?.[0];
+  return {
+    name: provider.person ? `${provider.person.lastName}, ${provider.person.firstName}${provider.person.middleName ? ` ${provider.person.middleName.charAt(0)}` : ''}` : provider.organization?.name ?? '',
+    qualifier,
+    npi: provider.npi,
+    otherId: secondary ? { qualifier: secondary.qualifier, value: secondary.value } : undefined,
   };
 }
 
