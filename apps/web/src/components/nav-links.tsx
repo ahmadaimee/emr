@@ -8,8 +8,9 @@ const NAV: Array<{ href: string; label: string; key: string; badge?: 'tasks' }> 
   { href: '/queues', label: 'Work queues', key: 'Q', badge: 'tasks' },
   { href: '/claims', label: 'Claims', key: 'C' },
   { href: '/remittances', label: 'Remittances', key: 'R' },
+  { href: '/payments', label: 'Payments', key: 'Y' },
   { href: '/eligibility', label: 'Eligibility', key: 'E' },
-  { href: '/patients', label: 'Patients', key: 'P' },
+  { href: '/patients', label: 'Patients & EHR', key: 'P' },
   { href: '/reports', label: 'Reports', key: '' },
 ];
 

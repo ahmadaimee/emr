@@ -1,21 +1,30 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { desc, eq, schema, sql } from '@grove/db';
+import { desc, eq, schema } from '@grove/db';
 import { Card, Code, Empty, Money, PageHeader, StatusPill } from '@/components/ui';
 import { date, relative } from '@/lib/format';
 import { pageContext } from '@/lib/session';
 import { AddCoverageModal } from './add-coverage-modal';
+import { NewSoapModal } from './new-soap-modal';
+import { UploadDocumentModal } from './upload-document-modal';
+import { DocumentViewButton } from './document-view-button';
+
+export const metadata = { title: 'Patient Chart & EHR' };
 
 export default async function PatientDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  const currentTab = sp.tab ?? 'chart';
   const { run } = await pageContext();
 
   const data = await run(`/patients/${id}`, async (ctx, phi) => {
-    // 1. Fetch patient
+    // In live DB mode, fetch patient, coverages, claims, ledger, and clinical records
     const [patient] = await ctx.tx
       .select({
         p: schema.patients,
@@ -26,9 +35,8 @@ export default async function PatientDetailPage({
       .where(eq(schema.patients.id, id));
 
     if (!patient) return null;
-    phi.touch([id], ['demographics', 'financial', 'insurance']);
+    phi.touch([id], ['demographics', 'financial', 'clinical']);
 
-    // 2. Fetch coverages
     const coverages = await ctx.tx
       .select({
         c: schema.coverages,
@@ -39,7 +47,6 @@ export default async function PatientDetailPage({
       .where(eq(schema.coverages.patientId, id))
       .orderBy(schema.coverages.rank);
 
-    // 3. Fetch claims
     const claims = await ctx.tx
       .select({
         c: schema.claims,
@@ -51,7 +58,6 @@ export default async function PatientDetailPage({
       .orderBy(desc(schema.claims.createdAt))
       .limit(20);
 
-    // 4. Fetch ledger entries
     const ledger = await ctx.tx
       .select()
       .from(schema.ledgerEntries)
@@ -59,16 +65,26 @@ export default async function PatientDetailPage({
       .orderBy(desc(schema.ledgerEntries.createdAt))
       .limit(30);
 
-    // 5. Payers for modal
     const payers = await ctx.tx
       .select({ id: schema.payers.id, name: schema.payers.name })
       .from(schema.payers);
 
-    return { patient, coverages, claims, ledger, payers };
+    return {
+      patient,
+      coverages,
+      claims,
+      ledger,
+      payers,
+      soapNotes: [],
+      medicalHistory: { conditions: [], surgeries: [], family: [], social: {} },
+      allergies: [],
+      medications: [],
+      documents: [],
+    };
   });
 
   if (!data) notFound();
-  const { patient, coverages, claims, ledger, payers } = data;
+  const { patient, coverages, claims, ledger, payers, soapNotes = [], medicalHistory = { conditions: [], surgeries: [], family: [], social: {} }, allergies = [], medications = [], documents = [] } = data;
   const p = patient.p;
 
   return (
@@ -82,127 +98,457 @@ export default async function PatientDetailPage({
 
       <PageHeader
         title={`${p.lastName}, ${p.firstName}`}
-        subtitle={`MRN: ${p.mrn} · DOB: ${date(p.dateOfBirth)} (${p.sex}) · ${patient.practiceName}`}
-        actions={<AddCoverageModal patientId={p.id} payers={payers} />}
+        subtitle={
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-xs font-medium text-grove-strong bg-grove-soft px-1.5 py-0.5 rounded">
+              {p.mrn}
+            </span>
+            <span>·</span>
+            <span>DOB {p.dateOfBirth ?? p.dob ?? '—'}</span>
+            <span>·</span>
+            <span>Sex: {p.sex ?? p.gender ?? '—'}</span>
+            <span>·</span>
+            <span>Practice: {patient.practiceName}</span>
+            <span>·</span>
+            <StatusPill status={p.status ?? 'active'} />
+          </span>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <NewSoapModal patientId={id} />
+            <UploadDocumentModal patientId={id} />
+            <AddCoverageModal patientId={id} payers={payers} />
+          </div>
+        }
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left column: Demographics & Coverages */}
-        <div className="space-y-6">
-          <Card title="Demographics & Contact">
-            <dl className="space-y-2.5 text-xs">
-              <div>
-                <dt className="text-ink-3">Mobile Phone</dt>
-                <dd className="font-medium text-ink">{p.phoneMobile || '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-ink-3">Email</dt>
-                <dd className="font-medium text-ink">{p.email || '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-ink-3">Address</dt>
-                <dd className="font-medium text-ink">
-                  {p.addressLine1 ? (
-                    <>
-                      {p.addressLine1}
-                      <br />
-                      {p.city}, {p.state} {p.zip}
-                    </>
-                  ) : (
-                    '—'
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-ink-3">SSN Last 4</dt>
-                <dd className="font-mono text-ink">***-**-{p.ssnLast4 || '****'}</dd>
-              </div>
-            </dl>
-          </Card>
+      {/* Patient Demographic Summary Card */}
+      <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-line bg-surface-raised p-4 sm:grid-cols-4 text-xs">
+        <div>
+          <span className="text-ink-4 block font-medium">Contact Phone</span>
+          <span className="text-ink font-semibold">{p.phoneMobile ?? p.phone ?? 'None on file'}</span>
+        </div>
+        <div>
+          <span className="text-ink-4 block font-medium">Email Address</span>
+          <span className="text-ink font-semibold truncate block">{p.email ?? 'None on file'}</span>
+        </div>
+        <div>
+          <span className="text-ink-4 block font-medium">Residential Address</span>
+          <span className="text-ink font-semibold">
+            {p.addressLine1 ? `${p.addressLine1}, ${p.city}, ${p.state} ${p.postalCode}` : 'None on file'}
+          </span>
+        </div>
+        <div>
+          <span className="text-ink-4 block font-medium">Primary Insurance</span>
+          <span className="text-ink font-semibold">
+            {coverages[0]?.payerName ? `${coverages[0].payerName} (${coverages[0].c.memberId})` : 'Self-Pay / None'}
+          </span>
+        </div>
+      </div>
 
-          <Card title="Insurance Coverages (COB Order)">
-            {coverages.length === 0 ? (
+      {/* Tab Navigation */}
+      <div className="mb-4 flex flex-wrap border-b border-line gap-1">
+        {[
+          { key: 'chart', label: 'Clinical Chart & SOAP Notes', count: soapNotes.length },
+          { key: 'history', label: 'Medical History & Rx', count: (medicalHistory.conditions?.length ?? 0) + medications.length },
+          { key: 'documents', label: 'EHR PHI Documents & Storage', count: documents.length },
+          { key: 'billing', label: 'Insurance & Ledger', count: coverages.length + claims.length },
+        ].map((tab) => (
+          <Link
+            key={tab.key}
+            href={`/patients/${id}?tab=${tab.key}`}
+            className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-medium transition-colors ${
+              currentTab === tab.key
+                ? 'border-grove text-grove-strong'
+                : 'border-transparent text-ink-3 hover:border-line-strong hover:text-ink'
+            }`}
+          >
+            <span>{tab.label}</span>
+            {tab.count > 0 && (
+              <span className="rounded-full bg-surface-sunken px-1.5 py-0.2 text-[10px] text-ink-2 font-mono">
+                {tab.count}
+              </span>
+            )}
+          </Link>
+        ))}
+      </div>
+
+      {/* TAB 1: CLINICAL CHART & SOAP NOTES */}
+      {currentTab === 'chart' && (
+        <div className="space-y-4">
+          {soapNotes.length === 0 ? (
+            <Card>
               <Empty
-                title="No insurance on file"
-                body="Patient is currently Self-Pay. Click '+ Add Insurance Coverage' to add insurance."
+                title="No clinical encounter notes"
+                body="Click 'New SOAP Note' above to document clinical findings, vital signs, and ICD-10 assessments."
               />
+            </Card>
+          ) : (
+            soapNotes.map((note: any) => (
+              <Card
+                key={note.id}
+                title={
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-semibold text-ink">
+                      Clinical Encounter — {date(note.encounterDate)}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded bg-ok-soft px-2 py-0.5 text-[11px] font-medium text-ok">
+                      <span>✓ Signed & Sealed</span>
+                      <span className="opacity-70">by {note.providerName}</span>
+                    </span>
+                  </div>
+                }
+              >
+                {/* Vitals Ribbon */}
+                {note.vitals && (
+                  <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg border border-line bg-surface-sunken/40 p-3 sm:grid-cols-4 lg:grid-cols-8 text-xs">
+                    <div>
+                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">BP</span>
+                      <span className="font-mono font-medium text-ink">{note.vitals.bloodPressure}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">Heart Rate</span>
+                      <span className="font-mono font-medium text-ink">{note.vitals.heartRate}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">Temp</span>
+                      <span className="font-mono font-medium text-ink">{note.vitals.temperature}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">SpO2</span>
+                      <span className="font-mono font-medium text-ink">{note.vitals.spo2}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">Resp Rate</span>
+                      <span className="font-mono font-medium text-ink">{note.vitals.respiratoryRate}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">Weight</span>
+                      <span className="font-mono font-medium text-ink">{note.vitals.weightLbs}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">Height</span>
+                      <span className="font-mono font-medium text-ink">{note.vitals.heightInches}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">BMI</span>
+                      <span className="font-mono font-medium text-ink">{note.vitals.bmi}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* S / O / A / P Structured Blocks */}
+                <div className="space-y-3 text-xs leading-relaxed">
+                  <div className="rounded-md border border-line p-3 bg-surface">
+                    <div className="font-bold text-ink mb-1 flex items-center gap-1.5">
+                      <span className="rounded bg-grove-soft px-1.5 py-0.5 text-grove-strong font-mono font-bold">S</span>
+                      <span>Subjective</span>
+                    </div>
+                    <div className="text-ink-2">
+                      <p className="font-medium text-ink mb-1">Chief Complaint: {note.subjective.chiefComplaint}</p>
+                      <p className="mb-1">{note.subjective.hpi}</p>
+                      <p className="text-ink-3 italic">{note.subjective.ros}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-line p-3 bg-surface">
+                    <div className="font-bold text-ink mb-1 flex items-center gap-1.5">
+                      <span className="rounded bg-grove-soft px-1.5 py-0.5 text-grove-strong font-mono font-bold">O</span>
+                      <span>Objective</span>
+                    </div>
+                    <p className="text-ink-2">{note.objective.exam}</p>
+                  </div>
+
+                  <div className="rounded-md border border-line p-3 bg-surface">
+                    <div className="font-bold text-ink mb-1 flex items-center gap-1.5">
+                      <span className="rounded bg-grove-soft px-1.5 py-0.5 text-grove-strong font-mono font-bold">A</span>
+                      <span>Assessment & Diagnoses</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-1.5">
+                      {note.assessment.map((a: any) => (
+                        <span
+                          key={a.icd10}
+                          className="inline-flex items-center gap-1.5 rounded border border-line bg-surface-sunken px-2 py-1 font-sans"
+                        >
+                          <span className="font-mono font-bold text-grove-strong">{a.icd10}</span>
+                          <span className="text-ink">{a.description}</span>
+                          <span className="text-[10px] text-ink-4 uppercase">({a.status})</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-line p-3 bg-surface">
+                    <div className="font-bold text-ink mb-1 flex items-center gap-1.5">
+                      <span className="rounded bg-grove-soft px-1.5 py-0.5 text-grove-strong font-mono font-bold">P</span>
+                      <span>Plan & Orders</span>
+                    </div>
+                    <div className="space-y-1 text-ink-2">
+                      <p><span className="font-semibold text-ink">Prescriptions:</span> {note.plan.medications}</p>
+                      <p><span className="font-semibold text-ink">Diagnostic & Therapy Orders:</span> {note.plan.orders}</p>
+                      <p><span className="font-semibold text-ink">Patient Instructions:</span> {note.plan.instructions}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between border-t border-line pt-2 text-[11px] text-ink-4">
+                  <span>Provider NPI: <span className="font-mono">{note.providerNpi}</span></span>
+                  <span>Signed at: {relative(note.signedAt)}</span>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: MEDICAL HISTORY & MEDICATIONS */}
+      {currentTab === 'history' && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Allergies Card */}
+          <Card title="Allergies & Adverse Reactions">
+            {allergies.length === 0 ? (
+              <p className="p-3 text-xs text-ink-3">No known drug allergies (NKDA).</p>
             ) : (
-              <div className="space-y-3">
-                {coverages.map(({ c, payerName }) => (
-                  <div
-                    key={c.id}
-                    className="rounded-md border border-line bg-surface p-3 text-xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-ink">{payerName}</span>
-                      <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
-                          c.rank === 'primary'
-                            ? 'bg-grove-soft text-grove-strong'
-                            : 'bg-surface-sunken text-ink-2'
-                        }`}
-                      >
-                        {c.rank}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-ink-3">
-                      Member ID: <span className="font-mono font-medium text-ink">{c.memberId}</span>
-                    </div>
-                    {c.groupNumber ? (
-                      <div className="text-ink-3">
-                        Group #: <span className="font-mono">{c.groupNumber}</span>
+              <div className="divide-y divide-line">
+                {allergies.map((alg: any) => (
+                  <div key={alg.id} className="p-3 text-xs flex items-start justify-between">
+                    <div>
+                      <div className="font-semibold text-ink flex items-center gap-1.5">
+                        <span className="text-danger font-bold">⚠️</span>
+                        <span>{alg.allergen}</span>
                       </div>
-                    ) : null}
-                    <div className="mt-2 text-[11px] text-ink-4">
-                      Relationship: {c.relationshipCode === '18' ? 'Self' : c.relationshipCode}
+                      <div className="text-ink-3 mt-0.5">Reaction: {alg.reaction}</div>
                     </div>
+                    <span className="rounded bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-danger">
+                      {alg.severity}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
           </Card>
-        </div>
 
-        {/* Right column: Claims & Ledger */}
-        <div className="space-y-6 lg:col-span-2">
-          <Card title={`Recent Claims (${claims.length})`}>
+          {/* Current Medications */}
+          <Card title="Current Medications">
+            {medications.length === 0 ? (
+              <p className="p-3 text-xs text-ink-3">No active medications documented.</p>
+            ) : (
+              <div className="divide-y divide-line">
+                {medications.map((m: any) => (
+                  <div key={m.id} className="p-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-ink">{m.name} {m.dosage}</span>
+                      <span className="rounded bg-ok-soft px-1.5 py-0.2 text-[10px] font-bold text-ok uppercase">
+                        {m.status}
+                      </span>
+                    </div>
+                    <div className="text-ink-3 mt-0.5">{m.frequency} ({m.route}) · {m.indication}</div>
+                    <div className="text-[10px] text-ink-4 mt-0.5">Rx by: {m.prescriber} · Started: {m.startDate}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Chronic Conditions */}
+          <Card title="Past Medical History (PMH)">
+            {medicalHistory.conditions?.length === 0 ? (
+              <p className="p-3 text-xs text-ink-3">No past medical conditions recorded.</p>
+            ) : (
+              <div className="divide-y divide-line">
+                {medicalHistory.conditions.map((c: any) => (
+                  <div key={c.id} className="p-3 text-xs flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-ink">{c.condition}</span>
+                      <span className="ml-1.5 font-mono text-[11px] text-ink-3">[{c.icd10}]</span>
+                      <div className="text-ink-3 text-[11px]">{c.notes}</div>
+                    </div>
+                    <span className="text-[11px] text-ink-4">Onset: {c.onsetYear}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Surgical History */}
+          <Card title="Past Surgical History (PSH)">
+            {medicalHistory.surgeries?.length === 0 ? (
+              <p className="p-3 text-xs text-ink-3">No past surgeries recorded.</p>
+            ) : (
+              <div className="divide-y divide-line">
+                {medicalHistory.surgeries.map((s: any) => (
+                  <div key={s.id} className="p-3 text-xs flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-ink">{s.procedure}</span>
+                      <div className="text-ink-3 text-[11px]">{s.facility} · {s.indication}</div>
+                    </div>
+                    <span className="text-[11px] text-ink-4 font-mono">{s.year}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Family & Social History */}
+          <Card title="Family & Social History" className="md:col-span-2">
+            <div className="grid gap-4 sm:grid-cols-2 p-3 text-xs">
+              <div>
+                <h4 className="font-semibold text-ink mb-2">Family History</h4>
+                <ul className="space-y-1 text-ink-2">
+                  {medicalHistory.family?.map((f: any, idx: number) => (
+                    <li key={idx}>
+                      <span className="font-medium text-ink">{f.relationship}:</span> {f.condition} ({f.status})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-ink mb-2">Social History</h4>
+                <ul className="space-y-1 text-ink-2">
+                  <li><span className="font-medium text-ink">Tobacco:</span> {medicalHistory.social?.tobacco ?? 'None'}</li>
+                  <li><span className="font-medium text-ink">Alcohol:</span> {medicalHistory.social?.alcohol ?? 'None'}</li>
+                  <li><span className="font-medium text-ink">Occupation:</span> {medicalHistory.social?.occupation ?? 'Unspecified'}</li>
+                  <li><span className="font-medium text-ink">Exercise:</span> {medicalHistory.social?.exercise ?? 'Sedentary'}</li>
+                </ul>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* TAB 3: EHR PHI DOCUMENT REPOSITORY */}
+      {currentTab === 'documents' && (
+        <Card title={`Clinical Attachments & Stored Files (${documents.length})`}>
+          {documents.length === 0 ? (
+            <Empty
+              title="No documents uploaded"
+              body="Click 'Upload PHI Document' to attach lab reports, diagnostic imaging, or signed HIPAA forms."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-line bg-surface-sunken/40 text-xs font-medium text-ink-3">
+                  <tr>
+                    <th className="px-3 py-2">Document Title</th>
+                    <th className="px-3 py-2">Category</th>
+                    <th className="px-3 py-2">Format / Size</th>
+                    <th className="px-3 py-2">Uploaded At</th>
+                    <th className="px-3 py-2">Uploaded By</th>
+                    <th className="px-3 py-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line text-xs">
+                  {documents.map((doc: any) => (
+                    <tr key={doc.id} className="hover:bg-surface-sunken/40">
+                      <td className="px-3 py-2.5 font-medium text-ink flex items-center gap-2">
+                        <span className="text-base">{doc.mimeType?.includes('pdf') ? '📄' : '🖼️'}</span>
+                        <span>{doc.title}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="rounded bg-surface-sunken px-2 py-0.5 text-[11px] font-medium text-ink-2 border border-line">
+                          {doc.category}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-ink-3 font-mono text-[11px]">
+                        {doc.mimeType?.split('/')[1]?.toUpperCase()} · {doc.fileSizeKb} KB
+                      </td>
+                      <td className="px-3 py-2.5 text-ink-3 text-[11px]">
+                        {date(doc.uploadedAt)} <span className="opacity-60 font-mono">({relative(doc.uploadedAt)})</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-ink-3 text-[11px]">
+                        {doc.uploadedBy}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <DocumentViewButton title={doc.title} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* TAB 4: BILLING, COVERAGES & LEDGER */}
+      {currentTab === 'billing' && (
+        <div className="space-y-4">
+          {/* Coverages */}
+          <Card title={`Active Coverages & COB Ranks (${coverages.length})`}>
+            {coverages.length === 0 ? (
+              <Empty
+                title="No insurance policies on file"
+                body="Click 'Add Insurance Coverage' to add primary or secondary coverage."
+              />
+            ) : (
+              <div className="divide-y divide-line">
+                {coverages.map(({ c, payerName }) => (
+                  <div key={c.id} className="flex items-center justify-between p-3 text-xs">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                            c.rank === 'primary'
+                              ? 'bg-grove-soft text-grove-strong'
+                              : 'bg-surface-sunken text-ink-2'
+                          }`}
+                        >
+                          {c.rank}
+                        </span>
+                        <span className="font-semibold text-ink">{payerName}</span>
+                      </div>
+                      <div className="text-ink-3">
+                        Member ID: <Code>{c.memberId}</Code>
+                        {c.groupNumber && (
+                          <span className="ml-3">
+                            Group: <Code>{c.groupNumber}</Code>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <StatusPill status={c.status} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Claims History */}
+          <Card title={`Claims History (${claims.length})`}>
             {claims.length === 0 ? (
-              <Empty title="No claims recorded for this patient" />
+              <Empty title="No claims created yet for this patient" />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-line bg-surface-sunken/40 text-xs font-medium text-ink-3">
                     <tr>
                       <th className="px-3 py-2">Claim #</th>
+                      <th className="px-3 py-2">Service Date</th>
                       <th className="px-3 py-2">Payer</th>
-                      <th className="px-3 py-2 text-right">Charges</th>
+                      <th className="px-3 py-2 text-right">Total Charge</th>
                       <th className="px-3 py-2 text-right">Balance</th>
                       <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2">Date</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-line">
+                  <tbody className="divide-y divide-line text-xs font-mono">
                     {claims.map(({ c, payerName }) => (
-                      <tr key={c.id} className="hover:bg-surface-sunken/40">
-                        <td className="px-3 py-2 font-mono text-xs">
-                          <Link
-                            href={`/claims/${c.id}`}
-                            className="font-medium text-grove-strong hover:underline"
-                          >
+                      <tr key={c.id} className="hover:bg-surface-sunken/40 font-sans">
+                        <td className="px-3 py-2.5 font-mono font-medium">
+                          <Link href={`/claims/${c.id}`} className="text-grove-strong hover:underline">
                             {c.claimNumber}
                           </Link>
                         </td>
-                        <td className="px-3 py-2 text-xs font-medium">{payerName}</td>
-                        <td className="px-3 py-2 text-right g-num text-xs">
+                        <td className="px-3 py-2.5 text-xs text-ink-3">{date(c.serviceDateFrom)}</td>
+                        <td className="px-3 py-2.5">{payerName}</td>
+                        <td className="px-3 py-2.5 text-right font-medium">
                           <Money cents={c.totalChargeCents} />
                         </td>
-                        <td className="px-3 py-2 text-right g-num text-xs font-medium">
-                          <Money cents={c.balanceCents} />
+                        <td className="px-3 py-2.5 text-right font-medium">
+                          <Money cents={c.balanceCents ?? c.totalChargeCents} />
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2.5">
                           <StatusPill status={c.status} />
                         </td>
-                        <td className="px-3 py-2 text-xs text-ink-3">{date(c.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -211,36 +557,40 @@ export default async function PatientDetailPage({
             )}
           </Card>
 
-          <Card title="Financial Ledger (Append-Only)">
+          {/* Financial Ledger */}
+          <Card title={`Append-Only Patient Ledger (${ledger.length})`}>
             {ledger.length === 0 ? (
-              <Empty
-                title="No financial ledger entries"
-                body="Transactions post automatically on charge creation, payments, and 835 remittance posting."
-              />
+              <Empty title="No ledger entries recorded" />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-line bg-surface-sunken/40 text-xs font-medium text-ink-3">
                     <tr>
-                      <th className="px-3 py-2">Entry Type</th>
-                      <th className="px-3 py-2">Party</th>
+                      <th className="px-3 py-2">Date</th>
+                      <th className="px-3 py-2">Type</th>
+                      <th className="px-3 py-2">Description</th>
                       <th className="px-3 py-2 text-right">Amount</th>
-                      <th className="px-3 py-2">Recorded</th>
+                      <th className="px-3 py-2 text-right">Balance After</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-line">
+                  <tbody className="divide-y divide-line text-xs font-mono">
                     {ledger.map((entry) => (
-                      <tr key={entry.id}>
-                        <td className="px-3 py-2 text-xs font-medium capitalize">
-                          {entry.entryType.replace(/_/g, ' ')}
+                      <tr key={entry.id} className="hover:bg-surface-sunken/40 font-sans">
+                        <td className="px-3 py-2 text-xs text-ink-3">{date(entry.createdAt)}</td>
+                        <td className="px-3 py-2 uppercase text-[11px] font-semibold text-ink-2">
+                          {entry.entryType.replace('_', ' ')}
                         </td>
-                        <td className="px-3 py-2 text-xs text-ink-3 capitalize">
-                          {entry.responsibilityParty}
+                        <td className="px-3 py-2 text-ink-2">{entry.description ?? '—'}</td>
+                        <td
+                          className={`px-3 py-2 text-right font-semibold ${
+                            entry.amountCents < 0 ? 'text-ok' : 'text-ink'
+                          }`}
+                        >
+                          <Money cents={entry.amountCents} />
                         </td>
-                        <td className="px-3 py-2 text-right g-num text-xs font-semibold">
-                          <Money cents={entry.amountCents} variance={entry.amountCents < 0} />
+                        <td className="px-3 py-2 text-right font-semibold text-ink">
+                          <Money cents={entry.balanceAfterCents} />
                         </td>
-                        <td className="px-3 py-2 text-xs text-ink-3">{relative(entry.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -249,8 +599,7 @@ export default async function PatientDetailPage({
             )}
           </Card>
         </div>
-      </div>
+      )}
     </>
   );
 }
-

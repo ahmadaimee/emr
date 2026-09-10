@@ -1,0 +1,61 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { appendAuditEvent } from '@grove/audit';
+import { eq, schema } from '@grove/db';
+import { pageContext } from '@/lib/session';
+
+export async function recordPaymentAction(formData: FormData) {
+  const patientId = String(formData.get('patientId') ?? '');
+  const amountCents = Math.round(Number(formData.get('amount') ?? 0) * 100);
+  const paymentSource = String(formData.get('source') ?? 'patient_card');
+  const referenceNumber = String(formData.get('referenceNumber') ?? `REF-${Date.now()}`);
+  const notes = String(formData.get('notes') ?? 'Point of care payment');
+
+  const { run, session } = await pageContext();
+
+  await run('/payments', async (ctx) => {
+    // 1. Insert payment record
+    const [pmt] = await ctx.tx
+      .insert(schema.payments)
+      .values({
+        orgId: ctx.tenant.orgId,
+        practiceId: session.actor.practiceIds?.[0] ?? '00000000-0000-4000-8000-000000000010',
+        paymentSource: paymentSource as any,
+        amountCents,
+        unallocatedCents: 0,
+        patientId: patientId || null,
+        referenceNumber,
+        status: 'settled',
+      })
+      .returning({ id: schema.payments.id });
+
+    // 2. Append-only ledger entry (RULE 6)
+    if (patientId) {
+      await ctx.tx.insert(schema.ledgerEntries).values({
+        orgId: ctx.tenant.orgId,
+        patientId,
+        entryType: 'patient_payment',
+        amountCents: -amountCents, // credits decrease balance
+        balanceAfterCents: 0,
+        description: `Payment recorded via ${paymentSource.replace('_', ' ')} (${referenceNumber})`,
+      });
+    }
+
+    // 3. HMAC-chained audit log (RULE 7)
+    await appendAuditEvent(ctx.tx, {
+      orgId: ctx.tenant.orgId,
+      action: 'create',
+      resourceType: 'payment',
+      resourceId: pmt?.id ?? `pmt-${Date.now()}`,
+      actorUserId: session.actor.userId,
+      sessionId: session.sessionId,
+      requestId: ctx.tenant.requestId,
+      context: { amountCents, paymentSource, patientId },
+    });
+  });
+
+  revalidatePath('/payments');
+  revalidatePath('/dashboard');
+  if (patientId) revalidatePath(`/patients/${patientId}`);
+}

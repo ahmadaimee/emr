@@ -23,6 +23,7 @@ import {
   getMockAutomationSettings,
   getMockRulesData,
   getMockUsersData,
+  getMockPaymentsData,
 } from './mock-data';
 
 export const SESSION_COOKIE = 'grove_session';
@@ -49,6 +50,7 @@ function resolveRouteFallback(route: string): any {
     const id = route.replace('/remittances/', '').split('/')[0]!;
     return getMockRemittanceDetail(id);
   }
+  if (route === '/payments') return getMockPaymentsData();
   if (route === '/eligibility') return getMockEligibilityData();
   if (route === '/patients') return getMockPatientsData();
   if (route.startsWith('/patients/')) {
@@ -68,7 +70,7 @@ export async function getSession(): Promise<ResolvedSession | null> {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  if (token.startsWith('demo_')) return DEMO_SESSION;
+  if (token.startsWith('demo_') || process.env.DEMO_MODE === 'true') return DEMO_SESSION;
   try {
     const h = await headers();
     const requestId = h.get('x-request-id') ?? `web_${randomUUID().replace(/-/g, '').slice(0, 20)}`;
@@ -102,6 +104,9 @@ export async function pageContext(): Promise<PageContext> {
   return {
     session,
     run: async (route, fn) => {
+      if (session.sessionId.startsWith('demo_') || process.env.DEMO_MODE === 'true') {
+        return resolveRouteFallback(route) as T;
+      }
       try {
         return await withTenant(session.tenant, async (tx) => {
           const phi = new PhiAccessCollector({

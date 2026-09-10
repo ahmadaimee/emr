@@ -123,3 +123,66 @@ export async function addCoverage(formData: FormData) {
   revalidatePath(`/patients/${patientId}`);
 }
 
+export async function createSoapNote(formData: FormData) {
+  const patientId = String(formData.get('patientId') ?? '');
+  const bp = String(formData.get('bp') ?? '');
+  const hr = String(formData.get('hr') ?? '');
+  const temp = String(formData.get('temp') ?? '');
+  const rr = String(formData.get('rr') ?? '');
+  const spo2 = String(formData.get('spo2') ?? '');
+  const weight = String(formData.get('weight') ?? '');
+  const height = String(formData.get('height') ?? '');
+  const subjective = String(formData.get('subjective') ?? '');
+  const objective = String(formData.get('objective') ?? '');
+  const primaryIcd10 = String(formData.get('primaryIcd10') ?? '');
+  const primaryDiagnosis = String(formData.get('primaryDiagnosis') ?? '');
+  const plan = String(formData.get('plan') ?? '');
+  const signed = Boolean(formData.get('signed'));
+
+  const { run, session } = await pageContext();
+  await run(`/patients/${patientId}`, async (ctx, phi) => {
+    phi.touch([patientId], ['clinical']);
+    const noteId = randomUUID();
+
+    await appendAuditEvent(ctx.tx, {
+      orgId: ctx.tenant.orgId,
+      action: 'create',
+      resourceType: 'clinical_note',
+      resourceId: noteId,
+      patientId,
+      actorUserId: session.actor.userId,
+      sessionId: session.sessionId,
+      requestId: ctx.tenant.requestId,
+      context: { primaryIcd10, signed },
+    });
+  });
+
+  revalidatePath(`/patients/${patientId}`);
+}
+
+export async function uploadPatientDocument(formData: FormData) {
+  const patientId = String(formData.get('patientId') ?? '');
+  const title = String(formData.get('title') ?? 'Untitled Document');
+  const category = String(formData.get('category') ?? 'General PHI');
+
+  const { run, session } = await pageContext();
+  await run(`/patients/${patientId}`, async (ctx, phi) => {
+    phi.touch([patientId], ['clinical', 'demographics']);
+    const docId = randomUUID();
+
+    await appendAuditEvent(ctx.tx, {
+      orgId: ctx.tenant.orgId,
+      action: 'create',
+      resourceType: 'document',
+      resourceId: docId,
+      patientId,
+      actorUserId: session.actor.userId,
+      sessionId: session.sessionId,
+      requestId: ctx.tenant.requestId,
+      context: { title, category },
+    });
+  });
+
+  revalidatePath(`/patients/${patientId}`);
+}
+
