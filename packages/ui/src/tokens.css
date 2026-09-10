@@ -9,7 +9,11 @@
  * data-theme wins over the system preference in both directions.
  */
 
-:root {
+:root,
+:root[data-theme="light"],
+:root.light,
+html[data-theme="light"],
+html.light {
   /* --- Surfaces & ink (warm neutral ramp) ---------------------------------- */
   --g-surface:          #faf9f7;
   --g-surface-raised:   #ffffff;
@@ -112,7 +116,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme="light"]):not(.light) {
     --g-surface:          #171614;
     --g-surface-raised:   #1f1e1b;
     --g-surface-sunken:   #121110;
@@ -161,7 +165,10 @@
   }
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+:root.dark,
+html[data-theme="dark"],
+html.dark {
   --g-surface:          #171614;
   --g-surface-raised:   #1f1e1b;
   --g-surface-sunken:   #121110;

@@ -16,6 +16,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${instrument.variable} ${geistMono.variable}`} data-density="compact" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var effective=t==='dark'||(t!=='light'&&d)?'dark':'light';document.documentElement.setAttribute('data-theme',effective);document.documentElement.classList.toggle('dark',effective==='dark');document.documentElement.classList.toggle('light',effective==='light');}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body style={{ ['--g-font-ui' as string]: 'var(--font-inter), system-ui, sans-serif', ['--g-font-display' as string]: 'var(--font-instrument), var(--font-inter), sans-serif', ['--g-font-mono' as string]: 'var(--font-geist-mono), ui-monospace, monospace' }}>
         {children}
       </body>

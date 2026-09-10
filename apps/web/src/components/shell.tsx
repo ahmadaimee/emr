@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { CommandPalette } from './command-palette';
 import { NavLinks } from './nav-links';
+import { ThemeToggle } from './theme-toggle';
 
 export function Shell({ children, user, org, openTasks }: { children: ReactNode; user: { name: string; email: string }; org: { name: string }; openTasks: number }) {
   return (
@@ -22,14 +23,17 @@ export function Shell({ children, user, org, openTasks }: { children: ReactNode;
             <span>Search or jump…</span>
             <span className="g-kbd">⌘K</span>
           </button>
-          <div className="mt-3 flex items-center justify-between">
-            <div className="min-w-0">
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">{user.name}</div>
               <div className="truncate text-[11px] text-ink-3">{user.email}</div>
             </div>
-            <form action="/logout" method="post">
-              <button className="rounded-md px-2 py-1 text-xs text-ink-3 hover:bg-surface-sunken hover:text-ink" title="Sign out">Sign out</button>
-            </form>
+            <div className="flex items-center gap-1 shrink-0">
+              <ThemeToggle />
+              <form action="/logout" method="post">
+                <button className="rounded-md px-2 py-1 text-xs text-ink-3 hover:bg-surface-sunken hover:text-ink" title="Sign out">Sign out</button>
+              </form>
+            </div>
           </div>
         </div>
       </aside>
