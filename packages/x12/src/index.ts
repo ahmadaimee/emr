@@ -19,6 +19,8 @@ export {
 export type { InterchangeOptions, TradingPartner, UsageIndicator } from './envelope';
 export { generate837P, groupCas } from './generators/837p';
 export type { Generate837POptions } from './generators/837p';
+export { generate837I } from './generators/837i';
+export type { Generate837IOptions } from './generators/837i';
 export { generate270 } from './generators/270';
 export { parse835, parseCas, checkBalance } from './parsers/835';
 export { parse271, parseEb, summarizeBenefits } from './parsers/271';

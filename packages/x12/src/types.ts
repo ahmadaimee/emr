@@ -267,6 +267,10 @@ export interface RevenueLine {
   chargeCents: number;
   /** FL 48 — non-covered charges. */
   nonCoveredCents?: number;
+  /** Our line identifier, echoed back in the 835 as REF*6R. */
+  lineControlNumber?: string;
+  /** Loop 2430: what a prior payer did with this line, on a secondary bill. */
+  priorAdjudications?: PriorLineAdjudication[];
 }
 
 /** A diagnosis with its present-on-admission indicator (FL 67, 72). */
@@ -305,6 +309,8 @@ export interface ValueCode {
 export interface UbProvider {
   npi: string;
   person: Person;
+  /** PRV*AT — taxonomy, reported on the attending provider. */
+  taxonomyCode?: string;
   /** FL 76b qualifier and ID, when a secondary identifier is reported. */
   qualifier?: string;
   otherId?: string;

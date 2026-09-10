@@ -14,6 +14,7 @@ the subset Grove needs, in both directions.
 | **270** | out | Eligibility inquiry | `generators/270.ts` |
 | **271** | in | Eligibility response | `parsers/271.ts` |
 | **837P** | out | Professional claim | `generators/837p.ts` |
+| **837I** | out | Institutional claim (the UB-04 on the wire) | `generators/837i.ts` |
 | **835** | in | Remittance advice (ERA) | `parsers/835.ts` |
 | **999** | in | Functional acknowledgement — was the file syntactically valid? | |
 | **277CA** | in | Claim acknowledgement — did the payer accept the claim? | |
@@ -25,6 +26,18 @@ A **999** says the interchange parsed. A **277CA** says the payer accepted the c
 into adjudication. A file can pass the 999 and still have every claim rejected at the
 277CA — which is why [[Claim Lifecycle]] distinguishes `acknowledged` from `submitted`,
 and `rejected` from `denied`.
+
+## Professional and institutional are not the same transaction
+
+The 837I is not the 837P with different loop names. Three differences drive the rest:
+
+- Lines are **SV2** and keyed on a **revenue code**; the HCPCS is supporting detail.
+- Everything the UB-04 holds in its code boxes — condition, occurrence, value and span
+  codes, procedures, the DRG — rides in **HI** segments rather than dedicated ones, and
+  the present-on-admission indicator sits in the *ninth* component of the diagnosis.
+- The **type of bill** drives CLM05: its middle digits are the facility code and its last
+  digit the claim frequency, so a replacement bill is a change of TOB rather than a
+  separate field. See [[Package - forms]] for the paper form.
 
 ## Structure
 
