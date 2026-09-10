@@ -73,3 +73,4 @@ export async function updateAutomation(formData: FormData) {
   revalidatePath('/settings/automation');
   revalidatePath('/dashboard');
 }
+

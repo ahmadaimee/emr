@@ -28,7 +28,7 @@ export default async function EligibilityPage() {
 
     phi.touch(
       checks.map((c) => c.c.patientId),
-      ['demographics', 'insurance'],
+      ['demographics', 'financial'],
       checks.length
     );
 
@@ -196,3 +196,4 @@ export default async function EligibilityPage() {
     </>
   );
 }
+

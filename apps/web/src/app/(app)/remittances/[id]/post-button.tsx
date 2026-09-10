@@ -23,3 +23,4 @@ export function PostButton({ remittanceId, disabled }: { remittanceId: string; d
     </Button>
   );
 }
+

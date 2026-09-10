@@ -188,3 +188,4 @@ export function AutomationControls({ settings }: AutomationControlsProps) {
     </div>
   );
 }
+

@@ -24,7 +24,7 @@ export async function checkSingleEligibility(formData: FormData) {
       .where(eq(schema.patients.id, patientId));
 
     if (!patient) throw new Error('Patient not found');
-    phi.touch([patientId], ['demographics', 'insurance']);
+    phi.touch([patientId], ['demographics', 'financial']);
 
     const [payer] = await ctx.tx
       .select()
@@ -132,9 +132,7 @@ export async function runBatchEligibility(name: string) {
     const [practice] = await ctx.tx.select().from(schema.practices).limit(1);
     if (!practice) throw new Error('No practice found');
 
-    const batchId = randomUUID();
-    await ctx.tx.insert(schema.eligibilityBatches).values({
-      id: batchId,
+    const [batch] = await ctx.tx.insert(schema.eligibilityBatches).values({
       orgId: ctx.tenant.orgId,
       practiceId: practice.id,
       name: name || `Panel Batch ${new Date().toLocaleDateString()}`,
@@ -142,14 +140,15 @@ export async function runBatchEligibility(name: string) {
       sourceType: 'panel',
       sourceParams: {},
       serviceTypeCodes: ['30'],
-      totalRequests: 10,
-      completedRequests: 10,
+      totalCount: 10,
+      completedCount: 10,
       activeCount: 9,
       inactiveCount: 1,
       errorCount: 0,
       startedAt: new Date(),
       completedAt: new Date(),
-    });
+    }).returning({ id: schema.eligibilityBatches.id });
+    const batchId = batch?.id ?? randomUUID();
 
     await appendAuditEvent(ctx.tx, {
       orgId: ctx.tenant.orgId,
@@ -165,3 +164,4 @@ export async function runBatchEligibility(name: string) {
 
   revalidatePath('/eligibility');
 }
+

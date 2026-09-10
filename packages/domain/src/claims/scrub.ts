@@ -166,7 +166,7 @@ export async function scrubClaimCommand(ctx: CommandContext, claimId: string): P
 
   const current = a.claim.status;
   if (current === 'draft' || current === 'rejected' || current === 'needs_review' || current === 'ready') {
-    if (current !== 'scrubbing') await transitionClaim(ctx, claimId, 'scrubbing', ctx.actor ? 'user' : 'system');
+    await transitionClaim(ctx, claimId, 'scrubbing', ctx.actor ? 'user' : 'system');
   }
   const next = result.clean ? 'ready' : 'needs_review';
   await transitionClaim(ctx, claimId, next, ctx.actor ? 'user' : 'system', `${result.errorCount} errors, ${result.warningCount} warnings`);

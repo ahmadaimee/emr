@@ -80,3 +80,4 @@ export async function postRemittance(remittanceId: string) {
   revalidatePath('/dashboard');
   revalidatePath('/claims');
 }
+

@@ -122,3 +122,4 @@ export async function addCoverage(formData: FormData) {
 
   revalidatePath(`/patients/${patientId}`);
 }
+

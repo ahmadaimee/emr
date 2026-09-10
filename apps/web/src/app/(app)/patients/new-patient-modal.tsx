@@ -151,3 +151,4 @@ export function NewPatientModal({ practices }: NewPatientModalProps) {
     </>
   );
 }
+

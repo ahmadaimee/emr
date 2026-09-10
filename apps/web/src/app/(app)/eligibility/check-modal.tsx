@@ -160,3 +160,4 @@ export function CheckModal({ patients, payers }: CheckModalProps) {
     </>
   );
 }
+

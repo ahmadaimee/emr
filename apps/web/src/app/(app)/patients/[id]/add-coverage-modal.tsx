@@ -117,3 +117,4 @@ export function AddCoverageModal({ patientId, payers }: AddCoverageModalProps) {
     </>
   );
 }
+
