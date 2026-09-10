@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { desc, eq, schema, sql } from '@grove/db';
-import { Empty, Money, PageHeader } from '@/components/ui';
+import { Empty, Kpi, Money, PageHeader } from '@/components/ui';
 import { date, relative } from '@/lib/format';
 import { pageContext } from '@/lib/session';
 import { NewPatientModal } from './new-patient-modal';
+import { MergePatientsModal } from './merge-patients-modal';
 
 export const metadata = { title: 'Patients' };
 
@@ -60,8 +61,50 @@ export default async function PatientsPage({
       <PageHeader
         title="Patients"
         subtitle="Master patient index (MPI), active coverage rankings, and patient accounting."
-        actions={<NewPatientModal practices={data.practices} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <MergePatientsModal
+              patients={data.rows.map((r) => ({
+                id: r.p.id,
+                name: `${r.p.lastName}, ${r.p.firstName}`,
+                mrn: r.p.mrn,
+                dob: (r.p.dateOfBirth ?? r.p.dob) as string,
+              }))}
+            />
+            <NewPatientModal practices={data.practices} />
+          </div>
+        }
       />
+
+      {/* Top Patient KPIs */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
+        <Kpi
+          variant="primary"
+          label="Total Active Patients"
+          value={data.rows.length}
+          hint="MPI active roster across practices"
+          badge="MPI"
+        />
+        <Kpi
+          variant="secondary"
+          label="Active Insurances"
+          value={data.rows.filter((r) => r.primaryPayer).length}
+          hint="Verified primary coverage"
+          tone="ok"
+        />
+        <Kpi
+          variant="secondary"
+          label="Open Claim Balance"
+          value={data.rows.filter((r) => r.openClaims > 0).length}
+          hint="Patients with pending claims"
+        />
+        <Kpi
+          variant="secondary"
+          label="Practices Served"
+          value={data.practices.length}
+          hint="Clinical care centers"
+        />
+      </div>
 
       <div className="mb-4 flex items-center justify-between gap-3">
         <form className="flex items-center gap-2">

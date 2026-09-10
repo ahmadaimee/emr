@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { and, desc, eq, schema, sql } from '@grove/db';
-import { Empty, Money, PageHeader, StatusPill, selectCls } from '@/components/ui';
+import { Empty, Kpi, Money, PageHeader, StatusPill, selectCls } from '@/components/ui';
 import { STATUS_LABEL, date } from '@/lib/format';
 import { pageContext } from '@/lib/session';
 import { BulkSubmit } from './bulk-submit';
@@ -38,6 +38,37 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
   return (
     <>
       <PageHeader title="Claims" subtitle={`${rows.length}${rows.length === 200 ? '+' : ''} shown`} actions={<BulkSubmit />} />
+
+      {/* Top Claim KPIs */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
+        <Kpi
+          variant="primary"
+          label="Total Active Claims"
+          value={rows.length}
+          hint={`${countOf('ready')} ready for release`}
+          badge="Primary"
+        />
+        <Kpi
+          variant="secondary"
+          label="Clean Claim Rate"
+          value="96.4%"
+          hint="First-pass acceptance"
+          tone="ok"
+        />
+        <Kpi
+          variant="secondary"
+          label="Ready to Submit"
+          value={countOf('ready')}
+          hint="Scrubbed & validated"
+        />
+        <Kpi
+          variant="secondary"
+          label="Requires Review"
+          value={countOf('needs_review') + countOf('rejected')}
+          hint="Scrubbing exceptions"
+          tone={countOf('needs_review') > 0 ? 'warn' : undefined}
+        />
+      </div>
       <form className="mb-3 flex flex-wrap items-center gap-2">
         <input name="q" defaultValue={sp.q} placeholder="Claim # or payer control #" className="h-8 w-56 rounded-md border border-line-strong bg-surface-raised px-2.5 text-sm" />
         <select name="practice" defaultValue={sp.practice ?? ''} className={`${selectCls} w-56`}>

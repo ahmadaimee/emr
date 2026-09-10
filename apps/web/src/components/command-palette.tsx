@@ -26,8 +26,18 @@ const COMMANDS: Command[] = [
   { id: 'timely', label: 'Timely filing at risk', href: '/queues?category=timely_filing' },
   { id: 'remittances', label: 'Go to Remittances', href: '/remittances', hint: 'G R', keywords: '835 era' },
   { id: 'payments', label: 'Go to Payments & Patient Billing', href: '/payments', hint: 'G Y', keywords: 'patient payments copay card cash' },
+  { id: 'authorizations', label: 'Go to Prior Auth & Referrals', href: '/authorizations', hint: 'G A', keywords: 'prior auth pa referrals specialist' },
+  { id: 'claim-status', label: 'Go to Claim Status (276/277)', href: '/claim-status', hint: 'G S', keywords: '276 277 inquiry status check' },
+  { id: 'batches', label: 'Go to Batch Management', href: '/batches', hint: 'G B', keywords: 'batch 837p release eligibility payments' },
   { id: 'reports', label: 'Go to Reports', href: '/reports' },
+  { id: 'fee-schedules', label: 'Fee Schedules & Chargemaster', href: '/settings/fee-schedules?tab=fee_schedules', keywords: 'pricing allowable contract chargemaster ecw' },
+  { id: 'cpt-codes', label: 'CPT / HCPCS Procedure Directory', href: '/settings/fee-schedules?tab=cpt', keywords: 'procedures rvu em codes cpt' },
+  { id: 'dx-codes', label: 'ICD-10 Diagnoses (Dx) Management', href: '/settings/fee-schedules?tab=dx', keywords: 'diagnosis icd10 superbill favorite' },
+  { id: 'providers', label: 'Providers Directory & Info', href: '/settings/providers', keywords: 'rendering billing doctors npi' },
+  { id: 'organization', label: 'Organization & Practice Setup', href: '/settings/organization', keywords: 'ein group npi locations pos' },
+  { id: 'edi', label: 'Billing & EDI Setups', href: '/settings/edi', keywords: 'clearinghouse stedi submitter receiver' },
   { id: 'automation', label: 'Automation settings', href: '/settings/automation', keywords: 'pause kill switch' },
+  { id: 'rules', label: 'Rules & Denial Engine', href: '/settings/rules', keywords: 'rules denial ncci mue' },
   { id: 'audit', label: 'Audit log', href: '/settings/audit', keywords: 'compliance phi access' },
 ];
 
@@ -52,10 +62,21 @@ export function CommandPalette() {
         return;
       }
       if (typing || open) return;
-      // Two-key chords: G then D/C/P/E/Q/R.
+      // Two-key chords: G then D/C/P/E/Q/R/Y/A/S/B.
       const now = Date.now();
       if (lastKey.current && lastKey.current.key === 'g' && now - lastKey.current.at < 800) {
-        const map: Record<string, string> = { d: '/dashboard', c: '/claims', p: '/patients', e: '/eligibility', q: '/queues', r: '/remittances' };
+        const map: Record<string, string> = {
+          d: '/dashboard',
+          c: '/claims',
+          p: '/patients',
+          e: '/eligibility',
+          q: '/queues',
+          r: '/remittances',
+          y: '/payments',
+          a: '/authorizations',
+          s: '/claim-status',
+          b: '/batches',
+        };
         const href = map[e.key.toLowerCase()];
         if (href) {
           e.preventDefault();

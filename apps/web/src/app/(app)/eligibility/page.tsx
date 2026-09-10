@@ -84,23 +84,33 @@ export default async function EligibilityPage() {
         actions={<CheckModal patients={data.patients} payers={data.payers} />}
       />
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
         <Kpi
+          variant="primary"
           label="Total Inquiries Run"
           value={total}
-          hint="Automated and manual checks"
+          hint="Batch & real-time checks"
+          badge="EDI 270/271"
         />
         <Kpi
+          variant="secondary"
           label="Active Coverage Rate"
           value={bps(activeRate)}
           tone={activeRate !== null && activeRate >= 9000 ? 'ok' : 'warn'}
           hint={`${activeCount} confirmed active`}
         />
         <Kpi
+          variant="secondary"
           label="Coverage Exceptions"
           value={data.stats.inactive_count}
           tone={Number(data.stats.inactive_count) > 0 ? 'danger' : 'ok'}
-          hint="Inactive or member not found"
+          hint="Inactive or not found"
+        />
+        <Kpi
+          variant="secondary"
+          label="Schedule Batches"
+          value={data.batches.length}
+          hint="Nightly schedule sweeps"
         />
       </div>
 

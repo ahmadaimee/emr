@@ -90,6 +90,9 @@ importers:
       '@grove/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@grove/forms':
+        specifier: workspace:*
+        version: link:../../packages/forms
       '@grove/reporting':
         specifier: workspace:*
         version: link:../../packages/reporting

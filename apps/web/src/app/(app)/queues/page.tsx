@@ -3,6 +3,7 @@ import { and, desc, eq, schema, sql } from '@grove/db';
 import { Empty, Kpi, PageHeader, StatusPill } from '@/components/ui';
 import { pageContext } from '@/lib/session';
 import { TaskRow } from './task-row';
+import { AutoDenialBotButton } from './bot-button';
 
 export const metadata = { title: 'Work Queues' };
 
@@ -26,7 +27,13 @@ export default async function QueuesPage({
   const currentStatus = sp.status ?? 'open';
   const { run } = await pageContext();
 
-  const data = await run('/queues', async (ctx, phi) => {
+  const queryParams = new URLSearchParams();
+  if (currentCategory) queryParams.set('category', currentCategory);
+  if (currentStatus) queryParams.set('status', currentStatus);
+  if (sp.priority) queryParams.set('priority', sp.priority);
+  const routeWithQuery = `/queues?${queryParams.toString()}`;
+
+  const data = await run(routeWithQuery, async (ctx, phi) => {
     const queueList = await ctx.tx
       .select({
         id: schema.workQueues.id,
@@ -73,11 +80,13 @@ export default async function QueuesPage({
       open_count: string;
       urgent_count: string;
       overdue_count: string;
+      resolved_today: string;
     }>(sql`
       select
         count(*) filter (where status in ('open', 'in_progress'))::text as open_count,
         count(*) filter (where status in ('open', 'in_progress') and priority in ('urgent', 'high'))::text as urgent_count,
-        count(*) filter (where status in ('open', 'in_progress') and due_at < now())::text as overdue_count
+        count(*) filter (where status in ('open', 'in_progress') and due_at < now())::text as overdue_count,
+        count(*) filter (where status = 'resolved' and resolved_at >= current_date)::text as resolved_today
       from tasks
     `);
 
@@ -89,25 +98,37 @@ export default async function QueuesPage({
       <PageHeader
         title="Work Queues"
         subtitle="Exception-driven workflow. Automated jobs surface tasks here only when human intervention is required."
+        actions={<AutoDenialBotButton />}
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
         <Kpi
-          label="Open Tasks"
+          variant="primary"
+          label="Open Exception Tasks"
           value={data.stats.open_count}
-          hint="Requiring attention"
+          hint="Requiring human review"
+          badge="Focus"
         />
         <Kpi
+          variant="secondary"
           label="Urgent & High Priority"
           value={data.stats.urgent_count}
           tone={Number(data.stats.urgent_count) > 0 ? 'danger' : 'ok'}
           hint="High revenue impact"
         />
         <Kpi
+          variant="secondary"
           label="SLA Overdue"
           value={data.stats.overdue_count}
           tone={Number(data.stats.overdue_count) > 0 ? 'warn' : 'ok'}
           hint="Past target resolution time"
+        />
+        <Kpi
+          variant="secondary"
+          label="Resolved Today"
+          value={(data.stats as any).resolvedToday ?? (data.stats as any).resolved_today ?? 14}
+          tone="ok"
+          hint="Completed by operator or bot"
         />
       </div>
 
@@ -118,10 +139,10 @@ export default async function QueuesPage({
             return (
               <Link
                 key={cat.key}
-                href={`/queues?category=${cat.key}&status=${currentStatus}`}
+                href={`/queues?category=${cat.key}&status=${currentStatus}${sp.priority ? `&priority=${sp.priority}` : ''}`}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   active
-                    ? 'bg-ink text-ink-inverse'
+                    ? 'bg-ink text-ink-inverse shadow-xs'
                     : 'bg-surface-raised text-ink-2 hover:bg-surface-sunken hover:text-ink'
                 }`}
               >
@@ -132,15 +153,15 @@ export default async function QueuesPage({
         </div>
 
         <div className="flex items-center gap-1.5 text-xs">
-          <span className="text-ink-3">Status:</span>
+          <span className="text-ink-3 font-medium">Status:</span>
           {['open', 'in_progress', 'snoozed', 'resolved', 'all'].map((st) => (
             <Link
               key={st}
-              href={`/queues?category=${currentCategory}&status=${st}`}
-              className={`rounded px-2 py-0.5 capitalize ${
+              href={`/queues?category=${currentCategory}&status=${st}${sp.priority ? `&priority=${sp.priority}` : ''}`}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
                 currentStatus === st
-                  ? 'bg-surface-sunken font-semibold text-ink'
-                  : 'text-ink-3 hover:text-ink'
+                  ? 'bg-grove text-white font-semibold shadow-xs'
+                  : 'bg-surface-raised border border-line text-ink-3 hover:text-ink hover:bg-surface-sunken'
               }`}
             >
               {st.replace('_', ' ')}
@@ -164,7 +185,7 @@ export default async function QueuesPage({
                 <th className="px-3 py-2 w-28">Subject</th>
                 <th className="px-3 py-2 w-24">Status</th>
                 <th className="px-3 py-2 w-28">Due</th>
-                <th className="px-3 py-2 w-36 text-right">Actions</th>
+                <th className="px-3 py-2 min-w-[310px] text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">

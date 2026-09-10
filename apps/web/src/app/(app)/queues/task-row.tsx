@@ -92,37 +92,66 @@ export function TaskRow({ task }: TaskRowProps) {
           '—'
         )}
       </td>
-      <td className="px-3 py-3 align-top text-right">
-        <div className="flex items-center justify-end gap-1.5">
-          {task.suggestedAction ? (
-            <Button
-              variant="primary"
-              disabled={pending}
-              onClick={handleResolve}
-              className="h-7 px-2 text-xs"
-            >
-              Apply fix
-            </Button>
-          ) : (
+      <td className="px-3 py-3 align-top text-right whitespace-nowrap">
+        {task.status === 'resolved' ? (
+          <div className="inline-flex items-center justify-end gap-1.5 text-xs font-semibold text-ok bg-ok-soft/50 px-2.5 py-1 rounded-md border border-ok/20">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Resolved</span>
+          </div>
+        ) : task.status === 'snoozed' ? (
+          <div className="flex items-center justify-end gap-1.5">
             <Button
               variant="secondary"
               disabled={pending}
               onClick={handleResolve}
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2.5 text-xs whitespace-nowrap"
             >
               Resolve
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            disabled={pending}
-            onClick={handleSnooze}
-            className="h-7 px-2 text-xs"
-            title="Snooze 3 days"
-          >
-            Snooze
-          </Button>
-        </div>
+            <span className="inline-flex items-center rounded bg-surface-sunken px-2 py-1 text-[11px] font-medium text-ink-3">
+              Snoozed
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end gap-1.5">
+            {task.suggestedAction ? (
+              <Button
+                variant="primary"
+                disabled={pending}
+                onClick={handleResolve}
+                className="h-7 px-2.5 text-xs whitespace-nowrap shrink-0 inline-flex items-center gap-1.5 shadow-xs"
+                title="Auto-Fix Denial & Resubmit (Type 7 Replacement Claim with Payer ICN)"
+              >
+                <span>⚡</span>
+                <span>
+                  {task.title.toLowerCase().includes('denial') || task.suggestedAction.toLowerCase().includes('resubmit')
+                    ? 'Auto-Fix Denial & Resubmit'
+                    : 'Apply Fix'}
+                </span>
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                disabled={pending}
+                onClick={handleResolve}
+                className="h-7 px-2 text-xs whitespace-nowrap"
+              >
+                Resolve
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              disabled={pending}
+              onClick={handleSnooze}
+              className="h-7 px-2 text-xs whitespace-nowrap text-ink-3 hover:text-ink"
+              title="Snooze 3 days"
+            >
+              Snooze
+            </Button>
+          </div>
+        )}
       </td>
     </tr>
   );

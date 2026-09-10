@@ -14,3 +14,4 @@ export function DocumentViewButton({ title }: { title: string }) {
     </button>
   );
 }
+

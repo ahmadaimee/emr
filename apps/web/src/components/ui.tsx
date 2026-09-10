@@ -33,13 +33,72 @@ export function Severity({ severity }: { severity: string }) {
   return <span className={`inline-block rounded-sm px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{severity}</span>;
 }
 
-export function Kpi({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: 'danger' | 'warn' | 'ok' }) {
-  const t = tone === 'danger' ? 'text-danger' : tone === 'warn' ? 'text-warn' : tone === 'ok' ? 'text-ok' : 'text-ink';
+export function Kpi({
+  label,
+  value,
+  hint,
+  tone,
+  variant = 'secondary',
+  className = '',
+  badge,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  tone?: 'danger' | 'warn' | 'ok';
+  variant?: 'primary' | 'secondary';
+  className?: string;
+  badge?: string;
+}) {
+  const t =
+    tone === 'danger'
+      ? 'text-danger'
+      : tone === 'warn'
+      ? 'text-warn'
+      : tone === 'ok'
+      ? 'text-ok'
+      : 'text-ink';
+
+  const isPrimary = variant === 'primary';
+
   return (
-    <div className="rounded-lg border border-line bg-surface-raised p-4 shadow-sm">
-      <div className="text-xs font-medium uppercase tracking-wide text-ink-3">{label}</div>
-      <div className={`mt-1 font-display text-2xl font-semibold tracking-tight g-num ${t}`}>{value}</div>
-      {hint ? <div className="mt-1 text-xs text-ink-3">{hint}</div> : null}
+    <div
+      className={`flex flex-col justify-between rounded-xl border ${
+        isPrimary
+          ? 'border-grove/50 bg-surface-raised shadow-xs ring-1 ring-grove/20'
+          : 'border-line bg-surface-raised/90 shadow-xs'
+      } p-3 transition-all hover:border-line-strong hover:bg-surface-raised sm:p-3.5 ${className}`}
+    >
+      <div>
+        <div className="flex items-center justify-between gap-1">
+          <span
+            className={`text-[10px] font-medium uppercase tracking-wide ${
+              isPrimary ? 'text-grove-strong font-semibold' : 'text-ink-3'
+            }`}
+          >
+            {label}
+          </span>
+          {badge ? (
+            <span
+              className={`rounded px-1.5 py-0.2 text-[8px] font-medium ${
+                isPrimary
+                  ? 'bg-grove-soft text-grove-strong font-semibold'
+                  : 'bg-surface-sunken text-ink-3'
+              }`}
+            >
+              {badge}
+            </span>
+          ) : null}
+        </div>
+        <div className={`mt-1 font-display text-lg font-semibold tracking-tight g-num sm:text-xl ${t}`}>
+          {value}
+        </div>
+      </div>
+      {hint ? (
+        <div className="mt-1 text-[11px] text-ink-3 truncate" title={typeof hint === 'string' ? hint : undefined}>
+          {hint}
+        </div>
+      ) : null}
     </div>
   );
 }

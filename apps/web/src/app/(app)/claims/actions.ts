@@ -54,3 +54,78 @@ export async function voidClaimAction(claimId: string, reason: string) {
   revalidatePath(`/claims/${claimId}`);
   redirect(`/claims/${claimId}`);
 }
+
+export async function updateClaimFilingAction(
+  claimId: string,
+  params: {
+    claimType?: '837P' | '837I' | '837D';
+    claimFrequencyCode?: string;
+    originalPayerControlNumber?: string;
+    coverageRank?: 'primary' | 'secondary' | 'tertiary';
+    priorAuthNumber?: string;
+  }
+) {
+  const { run } = await pageContext();
+  await run(`/claims/${claimId}/update-filing`, async (ctx) => {
+    try {
+      await ctx.tx
+        .update(schema.claims)
+        .set({
+          coverageRank: params.coverageRank as any,
+          priorAuthNumber: params.priorAuthNumber,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.claims.id, claimId));
+    } catch {}
+  });
+
+  try {
+    const { updateMockClaimFiling } = await import('@/lib/mock-data');
+    updateMockClaimFiling(claimId, params);
+  } catch {}
+
+  revalidatePath(`/claims/${claimId}`);
+  revalidatePath(`/claims/${claimId}/hcfa`);
+}
+
+export async function addClaimNoteAction(
+  claimId: string,
+  params: { category: string; content: string }
+) {
+  const { run, session } = await pageContext();
+  await run(`/claims/${claimId}/add-note`, async (ctx) => {
+    try {
+      await ctx.tx.insert(schema.activityEvents).values({
+        orgId: ctx.tenant.orgId,
+        actorType: 'user',
+        actorUserId: session.actor.userId,
+        actorLabel: session.actor.email,
+        subjectType: 'claim',
+        subjectId: claimId,
+        verb: 'claim.note_added',
+        summary: `[${params.category}] ${params.content}`,
+        occurredAt: new Date(),
+      } as any);
+    } catch {}
+  });
+
+  try {
+    const { addMockClaimNote } = await import('@/lib/mock-data');
+    addMockClaimNote(claimId, {
+      category: params.category,
+      content: params.content,
+      author: session.actor.email.split('@')[0],
+      authorRole: 'Operator',
+    });
+  } catch {}
+
+  revalidatePath(`/claims/${claimId}`);
+}
+
+export async function dismissPatientAlertAction(patientId: string) {
+  try {
+    const { dismissMockPatientAlert } = await import('@/lib/mock-data');
+    dismissMockPatientAlert(patientId);
+  } catch {}
+}
+

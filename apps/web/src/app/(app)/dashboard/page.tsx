@@ -59,13 +59,49 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <PageHeader title="Dashboard" subtitle={`${Number(data.spend.calls)} automated payer calls today · ${(Number(data.spend.cents) / 100).toFixed(2)} spent`} />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <Kpi label="Total A/R" value={<Money cents={total} />} hint={`${data.ar.open_claims} open claims`} />
-        <Kpi label="A/R over 90 days" value={<Money cents={over90} />} hint={total > 0 ? `${Math.round((100 * over90) / total)}% of total` : undefined} tone={total > 0 && over90 / total > 0.25 ? 'danger' : undefined} />
-        <Kpi label="Days in A/R" value={daysInAr || '—'} hint="Trailing 90-day charges" tone={daysInAr > 45 ? 'warn' : undefined} />
-        <Kpi label="Denial rate" value={bps(denialRate)} hint="Last 30 days" tone={denialRate !== null && denialRate > 1000 ? 'danger' : undefined} />
-        <Kpi label="Clean claim rate" value={bps(cleanRate)} hint="First submission accepted" tone={cleanRate !== null && cleanRate < 9000 ? 'warn' : undefined} />
-        <Kpi label="Timely filing at risk" value={<Money cents={Number(data.risk.cents)} />} hint={`${data.risk.n} claims within 14 days`} tone={Number(data.risk.n) > 0 ? 'danger' : 'ok'} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <Kpi
+          variant="primary"
+          label="Total A/R"
+          value={<Money cents={total} />}
+          hint={`${data.ar.open_claims} open claims`}
+          badge="Core KPI"
+        />
+        <Kpi
+          variant="secondary"
+          label="A/R over 90 days"
+          value={<Money cents={over90} />}
+          hint={total > 0 ? `${Math.round((100 * over90) / total)}% of total` : undefined}
+          tone={total > 0 && over90 / total > 0.25 ? 'danger' : undefined}
+        />
+        <Kpi
+          variant="secondary"
+          label="Days in A/R"
+          value={daysInAr || '—'}
+          hint="Trailing 90-day charges"
+          tone={daysInAr > 45 ? 'warn' : undefined}
+        />
+        <Kpi
+          variant="secondary"
+          label="Denial rate"
+          value={bps(denialRate)}
+          hint="Last 30 days"
+          tone={denialRate !== null && denialRate > 1000 ? 'danger' : undefined}
+        />
+        <Kpi
+          variant="secondary"
+          label="Clean claim rate"
+          value={bps(cleanRate)}
+          hint="First submission accepted"
+          tone={cleanRate !== null && cleanRate < 9000 ? 'warn' : undefined}
+        />
+        <Kpi
+          variant="secondary"
+          label="Timely filing at risk"
+          value={<Money cents={Number(data.risk.cents)} />}
+          hint={`${data.risk.n} claims within 14 days`}
+          tone={Number(data.risk.n) > 0 ? 'danger' : 'ok'}
+        />
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-5">

@@ -40,6 +40,11 @@ export async function resolveTask(taskId: string, resolutionCode: string = 'manu
     });
   });
 
+  try {
+    const { resolveMockTask } = await import('@/lib/mock-data');
+    resolveMockTask(taskId);
+  } catch {}
+
   revalidatePath('/queues');
   revalidatePath('/dashboard');
 }
@@ -66,6 +71,11 @@ export async function snoozeTask(taskId: string, days: number = 3) {
       detail: { snoozedUntil: until.toISOString(), days },
     });
   });
+
+  try {
+    const { snoozeMockTask } = await import('@/lib/mock-data');
+    snoozeMockTask(taskId, days);
+  } catch {}
 
   revalidatePath('/queues');
   revalidatePath('/dashboard');

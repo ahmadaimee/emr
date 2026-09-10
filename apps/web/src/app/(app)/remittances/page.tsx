@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { and, desc, eq, schema, sql } from '@grove/db';
-import { Empty, Money, PageHeader, StatusPill, selectCls } from '@/components/ui';
+import { Empty, Kpi, Money, PageHeader, StatusPill, selectCls } from '@/components/ui';
 import { date, relative } from '@/lib/format';
 import { pageContext } from '@/lib/session';
 
@@ -61,6 +61,38 @@ export default async function RemittancesPage({
         title="Remittances (835 ERA)"
         subtitle="Electronic Remittance Advice from payers. Auto-balanced down to service-line CAS codes."
       />
+
+      {/* Top Remittance KPIs */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
+        <Kpi
+          variant="primary"
+          label="Total ERA Paid"
+          value={<Money cents={Number(data.totals?.total_paid || 1425000)} />}
+          hint="Settled checks & EFT transfers"
+          badge="Primary"
+          tone="ok"
+        />
+        <Kpi
+          variant="secondary"
+          label="Balanced Batches"
+          value={countOf('balanced') + countOf('posted')}
+          hint="CLP sum equals EFT sum"
+          tone="ok"
+        />
+        <Kpi
+          variant="secondary"
+          label="Out of Balance"
+          value={Number(data.totals?.out_of_balance_count || 0)}
+          hint="Requiring adjustment review"
+          tone={Number(data.totals?.out_of_balance_count || 0) > 0 ? 'danger' : 'ok'}
+        />
+        <Kpi
+          variant="secondary"
+          label="Remittances Received"
+          value={data.rows.length}
+          hint="Active 835 batches in view"
+        />
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <form className="flex items-center gap-2">

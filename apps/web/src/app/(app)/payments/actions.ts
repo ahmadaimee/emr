@@ -80,3 +80,62 @@ export async function recordPaymentAction(formData: FormData) {
   revalidatePath('/dashboard');
   if (patientId) revalidatePath(`/patients/${patientId}`);
 }
+
+export async function recordInsurancePaymentAction(params: {
+  payerId: string;
+  payerName: string;
+  paymentType: 'check' | 'eft' | 'virtual_card';
+  checkOrEftTraceNumber: string;
+  paymentDate: string;
+  totalPaidCents: number;
+  allocations: Array<{
+    claimId: string;
+    claimNumber: string;
+    patientName: string;
+    billedCents: number;
+    allowedCents: number;
+    paidCents: number;
+    contractualAdjustmentCents: number;
+    patientResponsibilityCents: number;
+  }>;
+}) {
+  const { run, session } = await pageContext();
+  await run('/payments/post-insurance', async (ctx) => {
+    try {
+      await appendAuditEvent(ctx.tx, {
+        orgId: ctx.tenant.orgId,
+        action: 'create',
+        resourceType: 'payment',
+        resourceId: `remit-manual-${Date.now()}`,
+        actorUserId: session.actor.userId,
+        sessionId: session.sessionId,
+        requestId: ctx.tenant.requestId,
+        context: { payerName: params.payerName, totalPaidCents: params.totalPaidCents },
+      });
+    } catch {}
+  });
+
+  try {
+    const { addMockInsurancePayment } = await import('@/lib/mock-data');
+    addMockInsurancePayment({
+      id: `ins-pmt-${Date.now()}`,
+      paymentNumber: `INS-CHK-${Math.floor(1000 + Math.random() * 9000)}`,
+      payerId: params.payerId,
+      payerName: params.payerName,
+      paymentType: params.paymentType,
+      checkOrEftTraceNumber: params.checkOrEftTraceNumber,
+      paymentDate: params.paymentDate,
+      totalPaidCents: params.totalPaidCents,
+      contractualWriteoffCents: params.allocations.reduce((sum, a) => sum + (a.contractualAdjustmentCents || 0), 0),
+      patientResponsibilityCents: params.allocations.reduce((sum, a) => sum + (a.patientResponsibilityCents || 0), 0),
+      claimsCount: params.allocations.length,
+      status: 'posted',
+      postedAt: new Date(),
+      claimsAllocated: params.allocations,
+    });
+  } catch {}
+
+  revalidatePath('/payments');
+  revalidatePath('/remittances');
+  revalidatePath('/dashboard');
+}

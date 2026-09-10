@@ -147,3 +147,4 @@ export function UploadDocumentModal({ patientId }: { patientId: string }) {
     </>
   );
 }
+

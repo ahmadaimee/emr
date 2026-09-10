@@ -245,3 +245,4 @@ export function NewSoapModal({ patientId }: { patientId: string }) {
     </>
   );
 }
+

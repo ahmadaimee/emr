@@ -8,6 +8,8 @@ import { AddCoverageModal } from './add-coverage-modal';
 import { NewSoapModal } from './new-soap-modal';
 import { UploadDocumentModal } from './upload-document-modal';
 import { DocumentViewButton } from './document-view-button';
+import { MergePatientsModal } from '../merge-patients-modal';
+import { getMockPatientsData } from '@/lib/mock-data';
 
 export const metadata = { title: 'Patient Chart & EHR' };
 
@@ -115,6 +117,15 @@ export default async function PatientDetailPage({
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <MergePatientsModal
+              patients={getMockPatientsData().rows.map((r) => ({
+                id: r.p.id,
+                name: `${r.p.lastName}, ${r.p.firstName}`,
+                mrn: r.p.mrn,
+                dob: (r.p.dateOfBirth ?? r.p.dob) as string,
+              }))}
+              initialPrimaryId={id}
+            />
             <NewSoapModal patientId={id} />
             <UploadDocumentModal patientId={id} />
             <AddCoverageModal patientId={id} payers={payers} />

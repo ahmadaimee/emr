@@ -243,3 +243,77 @@ export async function uploadPatientDocument(formData: FormData) {
   revalidatePath(`/patients/${patientId}`);
 }
 
+export async function mergePatientsAction(primaryPatientId: string, duplicatePatientId: string, notes?: string) {
+  if (!primaryPatientId || !duplicatePatientId) {
+    throw new Error('Both Primary and Duplicate patient records are required.');
+  }
+  if (primaryPatientId === duplicatePatientId) {
+    throw new Error('Cannot merge a patient record into itself.');
+  }
+
+  const { run, session } = await pageContext();
+  await run('/patients', async (ctx, phi) => {
+    phi.touch([primaryPatientId, duplicatePatientId], ['demographics', 'clinical', 'financial']);
+
+    // Re-link claims to primary patient
+    await ctx.tx
+      .update(schema.claims)
+      .set({ patientId: primaryPatientId })
+      .where(eq(schema.claims.patientId, duplicatePatientId));
+
+    // Re-link coverages to primary patient
+    await ctx.tx
+      .update(schema.coverages)
+      .set({ patientId: primaryPatientId })
+      .where(eq(schema.coverages.patientId, duplicatePatientId));
+
+    // Re-link payments to primary patient
+    await ctx.tx
+      .update(schema.payments)
+      .set({ patientId: primaryPatientId })
+      .where(eq(schema.payments.patientId, duplicatePatientId));
+
+    // Re-link ledger entries to primary patient
+    await ctx.tx
+      .update(schema.ledgerEntries)
+      .set({ patientId: primaryPatientId })
+      .where(eq(schema.ledgerEntries.patientId, duplicatePatientId));
+
+    // Mark duplicate patient as merged
+    await ctx.tx
+      .update(schema.patients)
+      .set({
+        status: 'merged' as any,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.patients.id, duplicatePatientId));
+
+    // Audit log
+    await appendAuditEvent(ctx.tx, {
+      orgId: ctx.tenant.orgId,
+      action: 'update',
+      resourceType: 'patient',
+      resourceId: primaryPatientId,
+      patientId: primaryPatientId,
+      actorUserId: session.actor.userId,
+      sessionId: session.sessionId,
+      requestId: ctx.tenant.requestId,
+      context: {
+        action: 'merge',
+        survivorPatientId: primaryPatientId,
+        subsumedPatientId: duplicatePatientId,
+        notes: notes ?? 'Merged duplicate patient record',
+      },
+    });
+  });
+
+  try {
+    const { mergeMockPatients } = await import('@/lib/mock-data');
+    mergeMockPatients(primaryPatientId, duplicatePatientId);
+  } catch {}
+
+  revalidatePath('/patients');
+  revalidatePath(`/patients/${primaryPatientId}`);
+  revalidatePath(`/patients/${duplicatePatientId}`);
+}
+

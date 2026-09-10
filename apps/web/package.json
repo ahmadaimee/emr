@@ -16,6 +16,7 @@
     "@grove/clearinghouse": "workspace:*",
     "@grove/db": "workspace:*",
     "@grove/domain": "workspace:*",
+    "@grove/forms": "workspace:*",
     "@grove/reporting": "workspace:*",
     "@grove/ui": "workspace:*",
     "next": "16.3.4",

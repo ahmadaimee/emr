@@ -24,6 +24,13 @@ import {
   getMockRulesData,
   getMockUsersData,
   getMockPaymentsData,
+  getMockAuthorizationsData,
+  getMockClaimStatusData,
+  getMockBatchesData,
+  getMockProvidersData,
+  getMockOrganizationData,
+  getMockEdiSettingsData,
+  getMockFeeSchedulesData,
 } from './mock-data';
 
 export const SESSION_COOKIE = 'grove_session';
@@ -44,13 +51,24 @@ function resolveRouteFallback(route: string): any {
     const id = route.replace('/claims/', '').split('/')[0]!;
     return getMockClaimDetail(id);
   }
-  if (route.startsWith('/queues')) return getMockQueuesData();
+  if (route.startsWith('/queues')) {
+    const queryIdx = route.indexOf('?');
+    const params = queryIdx !== -1 ? new URLSearchParams(route.slice(queryIdx)) : new URLSearchParams();
+    return getMockQueuesData({
+      category: params.get('category') || undefined,
+      status: params.get('status') || undefined,
+      priority: params.get('priority') || undefined,
+    });
+  }
   if (route === '/remittances') return getMockRemittancesData();
   if (route.startsWith('/remittances/')) {
     const id = route.replace('/remittances/', '').split('/')[0]!;
     return getMockRemittanceDetail(id);
   }
   if (route === '/payments') return getMockPaymentsData();
+  if (route === '/authorizations') return getMockAuthorizationsData();
+  if (route === '/claim-status') return getMockClaimStatusData();
+  if (route === '/batches') return getMockBatchesData();
   if (route === '/eligibility') return getMockEligibilityData();
   if (route === '/patients') return getMockPatientsData();
   if (route.startsWith('/patients/')) {
@@ -60,6 +78,10 @@ function resolveRouteFallback(route: string): any {
   if (route === '/reports') return getMockReportsData();
   if (route === '/settings/automation') return getMockAutomationSettings();
   if (route === '/settings/rules') return getMockRulesData();
+  if (route === '/settings/fee-schedules') return getMockFeeSchedulesData();
+  if (route === '/settings/providers') return getMockProvidersData();
+  if (route === '/settings/organization') return getMockOrganizationData();
+  if (route === '/settings/edi') return getMockEdiSettingsData();
   if (route === '/settings/audit') return getMockAuditData();
   if (route === '/settings/users') return getMockUsersData();
   return {};
