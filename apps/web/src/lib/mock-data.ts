@@ -3431,6 +3431,287 @@ export function cloneMockFeeSchedule(id: string) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Scheduling & Appointments Subsystem
+// ---------------------------------------------------------------------------
 
+/**
+ * Clinic hours per provider, as local minutes from midnight. Free time is DERIVED
+ * from these minus booked appointments — never stored — so a booking or a cancellation
+ * cannot leave the availability figure stale.
+ */
+const PROVIDER_HOURS: Record<string, { start: number; end: number; lunch: [number, number]; room: string }> = {
+  'prv-1': { start: 8 * 60, end: 17 * 60, lunch: [12 * 60, 13 * 60], room: 'Room 1-A' },
+  'prv-2': { start: 9 * 60, end: 17 * 60 + 30, lunch: [12 * 60 + 30, 13 * 60 + 30], room: 'Room 2-C' },
+  'prv-3': { start: 7 * 60 + 30, end: 19 * 60, lunch: [13 * 60, 13 * 60 + 30], room: 'Urgent Bay 3' },
+};
 
+export const APPOINTMENT_TYPES = [
+  { code: 'new', label: 'New Patient', minutes: 40, cpt: '99204' },
+  { code: 'followup', label: 'Follow-up', minutes: 20, cpt: '99213' },
+  { code: 'annual', label: 'Annual Physical', minutes: 30, cpt: '99395' },
+  { code: 'telehealth', label: 'Telehealth', minutes: 15, cpt: '99213' },
+  { code: 'procedure', label: 'Procedure', minutes: 45, cpt: '20610' },
+  { code: 'labs', label: 'Lab / Injection', minutes: 10, cpt: '36415' },
+];
 
+const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+const label12 = (m: number) => {
+  const h = Math.floor(m / 60);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m % 60).padStart(2, '0')} ${suffix}`;
+};
+
+/** Offset in days from today, so the demo always has a live-looking book. */
+function dateFor(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+interface RawAppt {
+  providerId: string;
+  start: number;
+  type: string;
+  patientId: string;
+  patientName: string;
+  mrn: string;
+  status: string;
+  reason: string;
+  payer: string;
+  copayCents: number;
+  eligibility: 'verified' | 'pending' | 'issue';
+  dayOffset: number;
+}
+
+const RAW_APPOINTMENTS: RawAppt[] = [
+  // ---- Dr Vance (prv-1), today
+  { providerId: 'prv-1', start: 8 * 60, type: 'annual', patientId: 'pat-1', patientName: 'Alice Alpha', mrn: 'MRN-100241', status: 'completed', reason: 'Annual wellness visit', payer: 'Blue Cross Blue Shield', copayCents: 0, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-1', start: 8 * 60 + 40, type: 'followup', patientId: 'pat-2', patientName: 'Bob Beta', mrn: 'MRN-100518', status: 'completed', reason: 'Hypertension follow-up', payer: 'UnitedHealthcare', copayCents: 2500, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-1', start: 9 * 60 + 20, type: 'new', patientId: 'pat-3', patientName: 'Grace Gamma', mrn: 'MRN-100772', status: 'checked_in', reason: 'New patient — knee pain', payer: 'Aetna', copayCents: 4000, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-1', start: 10 * 60 + 30, type: 'followup', patientId: 'pat-4', patientName: 'Daniel Dorsey', mrn: 'MRN-101003', status: 'in_room', reason: 'Diabetes management', payer: 'Medicare Part B', copayCents: 0, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-1', start: 11 * 60, type: 'procedure', patientId: 'pat-5', patientName: 'Elena Ruiz', mrn: 'MRN-101144', status: 'scheduled', reason: 'Knee injection', payer: 'Cigna', copayCents: 5000, eligibility: 'issue', dayOffset: 0 },
+  { providerId: 'prv-1', start: 13 * 60, type: 'followup', patientId: 'pat-6', patientName: 'Frank Moreau', mrn: 'MRN-101290', status: 'scheduled', reason: 'Back pain re-check', payer: 'Blue Cross Blue Shield', copayCents: 2500, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-1', start: 14 * 60 + 30, type: 'telehealth', patientId: 'pat-7', patientName: 'Hana Ito', mrn: 'MRN-101377', status: 'scheduled', reason: 'Medication review', payer: 'UnitedHealthcare', copayCents: 1500, eligibility: 'pending', dayOffset: 0 },
+  { providerId: 'prv-1', start: 15 * 60 + 30, type: 'followup', patientId: 'pat-8', patientName: 'Ivan Petrov', mrn: 'MRN-101402', status: 'scheduled', reason: 'Post-op check', payer: 'Aetna', copayCents: 4000, eligibility: 'verified', dayOffset: 0 },
+
+  // ---- Dr Jenkins (prv-2), today
+  { providerId: 'prv-2', start: 9 * 60, type: 'new', patientId: 'pat-9', patientName: 'Julia Kraus', mrn: 'MRN-101511', status: 'completed', reason: 'New patient — fatigue', payer: 'Cigna', copayCents: 4500, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-2', start: 10 * 60, type: 'followup', patientId: 'pat-10', patientName: 'Kevin Osei', mrn: 'MRN-101623', status: 'no_show', reason: 'Thyroid follow-up', payer: 'Medicaid', copayCents: 0, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-2', start: 10 * 60 + 30, type: 'annual', patientId: 'pat-11', patientName: 'Laura Benn', mrn: 'MRN-101744', status: 'in_room', reason: 'Annual physical', payer: 'Blue Cross Blue Shield', copayCents: 0, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-2', start: 11 * 60 + 30, type: 'labs', patientId: 'pat-12', patientName: 'Marco Silva', mrn: 'MRN-101809', status: 'scheduled', reason: 'B12 injection', payer: 'UnitedHealthcare', copayCents: 1500, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-2', start: 13 * 60 + 30, type: 'followup', patientId: 'pat-13', patientName: 'Nadia Haddad', mrn: 'MRN-101915', status: 'scheduled', reason: 'Asthma review', payer: 'Aetna', copayCents: 3000, eligibility: 'pending', dayOffset: 0 },
+  { providerId: 'prv-2', start: 16 * 60, type: 'telehealth', patientId: 'pat-14', patientName: 'Omar Farouk', mrn: 'MRN-102033', status: 'scheduled', reason: 'Lab results review', payer: 'Cigna', copayCents: 1500, eligibility: 'verified', dayOffset: 0 },
+
+  // ---- Dr Rostova (prv-3), today — urgent care, busiest book
+  { providerId: 'prv-3', start: 7 * 60 + 30, type: 'followup', patientId: 'pat-15', patientName: 'Priya Nair', mrn: 'MRN-102140', status: 'completed', reason: 'Wound re-check', payer: 'Self-pay', copayCents: 8500, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-3', start: 8 * 60, type: 'labs', patientId: 'pat-16', patientName: 'Quinn Alvarez', mrn: 'MRN-102255', status: 'completed', reason: 'Rapid strep', payer: 'Medicaid', copayCents: 0, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-3', start: 8 * 60 + 30, type: 'new', patientId: 'pat-17', patientName: 'Rosa Delgado', mrn: 'MRN-102361', status: 'completed', reason: 'Ankle sprain', payer: 'Blue Cross Blue Shield', copayCents: 5000, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-3', start: 9 * 60 + 30, type: 'followup', patientId: 'pat-18', patientName: 'Sam Whitfield', mrn: 'MRN-102478', status: 'completed', reason: 'URI follow-up', payer: 'UnitedHealthcare', copayCents: 2500, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-3', start: 10 * 60, type: 'procedure', patientId: 'pat-19', patientName: 'Tina Brooks', mrn: 'MRN-102590', status: 'in_room', reason: 'Laceration repair', payer: 'Aetna', copayCents: 7500, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-3', start: 11 * 60, type: 'followup', patientId: 'pat-20', patientName: 'Umar Sheikh', mrn: 'MRN-102644', status: 'checked_in', reason: 'Rash evaluation', payer: 'Cigna', copayCents: 3000, eligibility: 'issue', dayOffset: 0 },
+  { providerId: 'prv-3', start: 11 * 60 + 30, type: 'labs', patientId: 'pat-21', patientName: 'Vera Lindqvist', mrn: 'MRN-102712', status: 'scheduled', reason: 'Flu shot', payer: 'Medicare Part B', copayCents: 0, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-3', start: 13 * 60 + 30, type: 'new', patientId: 'pat-22', patientName: 'Will Turner', mrn: 'MRN-102833', status: 'scheduled', reason: 'Chest congestion', payer: 'Self-pay', copayCents: 9500, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-3', start: 14 * 60 + 30, type: 'followup', patientId: 'pat-23', patientName: 'Xena Popov', mrn: 'MRN-102941', status: 'scheduled', reason: 'BP re-check', payer: 'Medicaid', copayCents: 0, eligibility: 'pending', dayOffset: 0 },
+  { providerId: 'prv-3', start: 15 * 60, type: 'telehealth', patientId: 'pat-24', patientName: 'Yusuf Rahman', mrn: 'MRN-103055', status: 'scheduled', reason: 'Telehealth — sinusitis', payer: 'Blue Cross Blue Shield', copayCents: 2500, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-3', start: 16 * 60, type: 'procedure', patientId: 'pat-25', patientName: 'Zoe Marchetti', mrn: 'MRN-103160', status: 'scheduled', reason: 'Abscess I&D', payer: 'UnitedHealthcare', copayCents: 7500, eligibility: 'verified', dayOffset: 0 },
+  { providerId: 'prv-3', start: 17 * 60, type: 'followup', patientId: 'pat-26', patientName: 'Aaron Beck', mrn: 'MRN-103277', status: 'scheduled', reason: 'Suture removal', payer: 'Aetna', copayCents: 3000, eligibility: 'verified', dayOffset: 0 },
+
+  // ---- Tomorrow
+  { providerId: 'prv-1', start: 8 * 60 + 30, type: 'new', patientId: 'pat-27', patientName: 'Bella Cruz', mrn: 'MRN-103301', status: 'scheduled', reason: 'New patient — migraines', payer: 'Cigna', copayCents: 4500, eligibility: 'pending', dayOffset: 1 },
+  { providerId: 'prv-1', start: 9 * 60 + 30, type: 'followup', patientId: 'pat-28', patientName: 'Caleb Stone', mrn: 'MRN-103419', status: 'scheduled', reason: 'Cholesterol review', payer: 'Blue Cross Blue Shield', copayCents: 2500, eligibility: 'verified', dayOffset: 1 },
+  { providerId: 'prv-2', start: 10 * 60, type: 'annual', patientId: 'pat-29', patientName: 'Dina Farr', mrn: 'MRN-103522', status: 'scheduled', reason: 'Annual physical', payer: 'Aetna', copayCents: 0, eligibility: 'verified', dayOffset: 1 },
+  { providerId: 'prv-3', start: 8 * 60, type: 'followup', patientId: 'pat-30', patientName: 'Eli Novak', mrn: 'MRN-103648', status: 'scheduled', reason: 'Cast check', payer: 'Medicaid', copayCents: 0, eligibility: 'verified', dayOffset: 1 },
+  { providerId: 'prv-3', start: 9 * 60, type: 'new', patientId: 'pat-31', patientName: 'Farah Aziz', mrn: 'MRN-103755', status: 'scheduled', reason: 'Abdominal pain', payer: 'UnitedHealthcare', copayCents: 5000, eligibility: 'verified', dayOffset: 1 },
+];
+
+let SCHEDULE_SEQ = 0;
+const GLOBAL_APPOINTMENTS: any[] = RAW_APPOINTMENTS.map((a) => {
+  const t = APPOINTMENT_TYPES.find((x) => x.code === a.type)!;
+  const provider = GLOBAL_PROVIDERS.find((p) => p.id === a.providerId)!;
+  const end = a.start + t.minutes;
+  return {
+    id: `appt-${++SCHEDULE_SEQ}`,
+    date: dateFor(a.dayOffset),
+    providerId: a.providerId,
+    providerName: `Dr. ${provider.firstName} ${provider.lastName}`,
+    providerCredentials: provider.credentials,
+    practiceName: provider.practiceNames[0],
+    room: PROVIDER_HOURS[a.providerId]!.room,
+    startMinutes: a.start,
+    endMinutes: end,
+    start: hhmm(a.start),
+    end: hhmm(end),
+    startLabel: label12(a.start),
+    endLabel: label12(end),
+    durationMinutes: t.minutes,
+    type: a.type,
+    typeLabel: t.label,
+    expectedCpt: t.cpt,
+    patientId: a.patientId,
+    patientName: a.patientName,
+    mrn: a.mrn,
+    status: a.status,
+    reason: a.reason,
+    payer: a.payer,
+    copayCents: a.copayCents,
+    eligibility: a.eligibility,
+    placeOfService: a.type === 'telehealth' ? '02' : '11',
+  };
+});
+
+/**
+ * Gaps in a provider's booked day, excluding lunch. Only gaps of >= 15 minutes are
+ * reported: a five-minute sliver between two visits is not sellable clinic time and
+ * counting it would overstate availability.
+ */
+function freeSlotsFor(providerId: string, date: string) {
+  const hours = PROVIDER_HOURS[providerId];
+  if (!hours) return { slots: [] as any[], freeMinutes: 0, bookedMinutes: 0, capacityMinutes: 0 };
+  const booked = GLOBAL_APPOINTMENTS
+    .filter((a) => a.providerId === providerId && a.date === date && a.status !== 'cancelled')
+    .sort((a, b) => a.startMinutes - b.startMinutes);
+
+  const blocks = [...booked.map((b) => [b.startMinutes, b.endMinutes] as [number, number]), hours.lunch].sort((a, b) => a[0] - b[0]);
+
+  const slots: any[] = [];
+  let cursor = hours.start;
+  for (const [s, e] of blocks) {
+    if (s - cursor >= 15) slots.push({ start: hhmm(cursor), end: hhmm(s), startLabel: label12(cursor), endLabel: label12(s), minutes: s - cursor });
+    cursor = Math.max(cursor, e);
+  }
+  if (hours.end - cursor >= 15) slots.push({ start: hhmm(cursor), end: hhmm(hours.end), startLabel: label12(cursor), endLabel: label12(hours.end), minutes: hours.end - cursor });
+
+  const lunchMinutes = hours.lunch[1] - hours.lunch[0];
+  const capacityMinutes = hours.end - hours.start - lunchMinutes;
+  const bookedMinutes = booked.reduce((s, b) => s + b.durationMinutes, 0);
+  return { slots, freeMinutes: slots.reduce((s, x) => s + x.minutes, 0), bookedMinutes, capacityMinutes };
+}
+
+/** Per-provider load for one day: how many appointments, how full, where the gaps are. */
+function providerDay(providerId: string, date: string) {
+  const provider = GLOBAL_PROVIDERS.find((p) => p.id === providerId)!;
+  const hours = PROVIDER_HOURS[providerId]!;
+  const appts = GLOBAL_APPOINTMENTS.filter((a) => a.providerId === providerId && a.date === date);
+  const { slots, freeMinutes, bookedMinutes, capacityMinutes } = freeSlotsFor(providerId, date);
+  const counts = (s: string) => appts.filter((a) => a.status === s).length;
+  return {
+    providerId,
+    providerName: `Dr. ${provider.firstName} ${provider.lastName}`,
+    credentials: provider.credentials,
+    specialty: provider.taxonomyDescription,
+    npi: provider.npi,
+    practiceName: provider.practiceNames[0],
+    room: hours.room,
+    hoursLabel: `${label12(hours.start)} – ${label12(hours.end)}`,
+    lunchLabel: `${label12(hours.lunch[0])} – ${label12(hours.lunch[1])}`,
+    appointments: appts.sort((a, b) => a.startMinutes - b.startMinutes),
+    total: appts.length,
+    completed: counts('completed'),
+    checkedIn: counts('checked_in'),
+    inRoom: counts('in_room'),
+    remaining: counts('scheduled'),
+    noShows: counts('no_show'),
+    bookedMinutes,
+    capacityMinutes,
+    freeMinutes,
+    utilizationBps: capacityMinutes > 0 ? Math.round((10000 * bookedMinutes) / capacityMinutes) : 0,
+    freeSlots: slots,
+    expectedCopayCents: appts.filter((a) => a.status !== 'no_show').reduce((s, a) => s + a.copayCents, 0),
+  };
+}
+
+export function getMockScheduleData(opts: { date?: string; providerId?: string } = {}) {
+  const date = opts.date || dateFor(0);
+  const providerIds = opts.providerId ? [opts.providerId] : Object.keys(PROVIDER_HOURS);
+  const days = providerIds.map((id) => providerDay(id, date));
+  const all = days.flatMap((d) => d.appointments);
+  return {
+    date,
+    isToday: date === dateFor(0),
+    dates: [-1, 0, 1, 2, 3].map((o) => ({ value: dateFor(o), offset: o })),
+    providers: days,
+    appointments: all.sort((a, b) => a.startMinutes - b.startMinutes),
+    totals: {
+      appointments: all.length,
+      completed: days.reduce((s, d) => s + d.completed, 0),
+      remaining: days.reduce((s, d) => s + d.remaining, 0),
+      noShows: days.reduce((s, d) => s + d.noShows, 0),
+      freeMinutes: days.reduce((s, d) => s + d.freeMinutes, 0),
+      bookedMinutes: days.reduce((s, d) => s + d.bookedMinutes, 0),
+      capacityMinutes: days.reduce((s, d) => s + d.capacityMinutes, 0),
+      expectedCopayCents: days.reduce((s, d) => s + d.expectedCopayCents, 0),
+      eligibilityIssues: all.filter((a) => a.eligibility !== 'verified').length,
+    },
+    allProviders: GLOBAL_PROVIDERS.map((p) => ({ id: p.id, name: `Dr. ${p.firstName} ${p.lastName}`, credentials: p.credentials })),
+    appointmentTypes: APPOINTMENT_TYPES,
+  };
+}
+
+/** The dashboard shows TODAY only — a compact read, not the scheduling console. */
+export function getMockTodayScheduleData() {
+  const d = getMockScheduleData({ date: dateFor(0) });
+  return {
+    date: d.date,
+    providers: d.providers.map((p) => ({
+      providerId: p.providerId,
+      providerName: p.providerName,
+      credentials: p.credentials,
+      room: p.room,
+      total: p.total,
+      completed: p.completed,
+      remaining: p.remaining,
+      noShows: p.noShows,
+      freeMinutes: p.freeMinutes,
+      utilizationBps: p.utilizationBps,
+      nextFree: p.freeSlots[0] ?? null,
+      next: p.appointments.find((a: any) => a.status === 'scheduled' || a.status === 'checked_in' || a.status === 'in_room') ?? null,
+    })),
+    totals: d.totals,
+  };
+}
+
+export function addMockAppointment(appt: any) {
+  const t = APPOINTMENT_TYPES.find((x) => x.code === appt.type) ?? APPOINTMENT_TYPES[1]!;
+  const provider = GLOBAL_PROVIDERS.find((p) => p.id === appt.providerId) ?? GLOBAL_PROVIDERS[0]!;
+  const [h, m] = String(appt.start || '09:00').split(':').map(Number);
+  const startMinutes = (h ?? 9) * 60 + (m ?? 0);
+  const endMinutes = startMinutes + t.minutes;
+  const row = {
+    id: `appt-${++SCHEDULE_SEQ}`,
+    date: appt.date || dateFor(0),
+    providerId: provider.id,
+    providerName: `Dr. ${provider.firstName} ${provider.lastName}`,
+    providerCredentials: provider.credentials,
+    practiceName: provider.practiceNames[0],
+    room: PROVIDER_HOURS[provider.id]?.room ?? 'Room 1-A',
+    startMinutes,
+    endMinutes,
+    start: hhmm(startMinutes),
+    end: hhmm(endMinutes),
+    startLabel: label12(startMinutes),
+    endLabel: label12(endMinutes),
+    durationMinutes: t.minutes,
+    type: t.code,
+    typeLabel: t.label,
+    expectedCpt: t.cpt,
+    patientId: appt.patientId || 'pat-1',
+    patientName: appt.patientName || 'New Patient',
+    mrn: appt.mrn || `MRN-${Math.floor(100000 + Math.random() * 899999)}`,
+    status: 'scheduled',
+    reason: appt.reason || t.label,
+    payer: appt.payer || 'Self-pay',
+    copayCents: Number(appt.copayCents) || 0,
+    eligibility: 'pending',
+    placeOfService: t.code === 'telehealth' ? '02' : '11',
+  };
+  GLOBAL_APPOINTMENTS.push(row);
+  return row;
+}
+
+export function setMockAppointmentStatus(id: string, status: string) {
+  const a = GLOBAL_APPOINTMENTS.find((x) => x.id === id);
+  if (a) a.status = status;
+  return a;
+}

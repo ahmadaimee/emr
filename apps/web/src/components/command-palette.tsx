@@ -26,6 +26,8 @@ const COMMANDS: Command[] = [
   { id: 'timely', label: 'Timely filing at risk', href: '/queues?category=timely_filing' },
   { id: 'remittances', label: 'Go to Remittances', href: '/remittances', hint: 'G R', keywords: '835 era' },
   { id: 'payments', label: 'Go to Payments & Patient Billing', href: '/payments', hint: 'G Y', keywords: 'patient payments copay card cash' },
+  { id: 'schedule', label: 'Go to Scheduling', href: '/schedule', hint: 'G H', keywords: 'schedule appointments calendar book slot availability provider free time' },
+  { id: 'schedule-providers', label: 'Provider availability', href: '/schedule?view=providers', keywords: 'availability free time open slots utilisation utilization capacity' },
   { id: 'authorizations', label: 'Go to Prior Auth & Referrals', href: '/authorizations', hint: 'G A', keywords: 'prior auth pa referrals specialist' },
   { id: 'claim-status', label: 'Go to Claim Status (276/277)', href: '/claim-status', hint: 'G S', keywords: '276 277 inquiry status check' },
   { id: 'batches', label: 'Go to Batch Management', href: '/batches', hint: 'G B', keywords: 'batch 837p release eligibility payments' },
@@ -76,6 +78,7 @@ export function CommandPalette() {
           a: '/authorizations',
           s: '/claim-status',
           b: '/batches',
+          h: '/schedule',
         };
         const href = map[e.key.toLowerCase()];
         if (href) {

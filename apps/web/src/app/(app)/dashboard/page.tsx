@@ -10,6 +10,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { recovery } = await searchParams;
   const { run } = await pageContext();
 
+  const today: any = await run('/dashboard/today-schedule', async () => ({}));
+
   const data = await run('/dashboard', async (ctx) => {
     const [ar] = await ctx.tx.execute<{ total: string; over90: string; patient: string; open_claims: string; denied_30: string; adjudicated_30: string; clean: string; submitted_30: string; charges_90: string }>(sql`
       select coalesce(sum(balance_cents) filter (where status not in ('paid','closed','voided')), 0)::text as total,
@@ -104,6 +106,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         />
       </div>
 
+      <TodaySchedule today={today} />
+
       <div className="mt-5 grid gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <Card title="Work queues">
@@ -146,6 +150,86 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
     </>
+  );
+}
+
+function TodaySchedule({ today }: { today: any }) {
+  const providers: any[] = today?.providers ?? [];
+  if (providers.length === 0) return null;
+  const totals = today.totals ?? {};
+  const free = (m: number) => {
+    const h = Math.floor(m / 60);
+    const r = m % 60;
+    return r === 0 ? `${h}h` : h === 0 ? `${r}m` : `${h}h ${r}m`;
+  };
+
+  return (
+    <div className="mt-5">
+      <Card
+        title="Today's schedule"
+        actions={
+          <Link href="/schedule" className="text-xs font-medium text-grove-strong hover:underline">
+            Open scheduling
+          </Link>
+        }
+      >
+        <div className="border-b border-line px-4 py-2 text-xs text-ink-3">
+          {totals.appointments} appointments · {totals.completed} completed · {totals.remaining} to come ·{' '}
+          {free(totals.freeMinutes ?? 0)} open clinic time
+          {totals.noShows > 0 ? <span className="text-danger"> · {totals.noShows} no-show</span> : null}
+        </div>
+        <table className="g-table">
+          <thead>
+            <tr>
+              <th>Provider</th>
+              <th className="text-right">Appts</th>
+              <th className="text-right">Done</th>
+              <th className="text-right">Left</th>
+              <th className="text-right">Free</th>
+              <th>Next open slot</th>
+              <th>Next patient</th>
+            </tr>
+          </thead>
+          <tbody>
+            {providers.map((p) => (
+              <tr key={p.providerId}>
+                <td>
+                  <Link href={`/schedule?provider=${p.providerId}`} className="font-medium hover:underline">
+                    {p.providerName}
+                  </Link>
+                  <span className="ml-1 text-xs text-ink-4">{p.room}</span>
+                </td>
+                <td data-numeric>{p.total}</td>
+                <td data-numeric><span className="text-ink-3">{p.completed}</span></td>
+                <td data-numeric>{p.remaining}</td>
+                <td data-numeric>
+                  <span className={p.freeMinutes >= 120 ? 'text-warn' : 'text-ink-3'}>{free(p.freeMinutes)}</span>
+                </td>
+                <td className="text-xs">
+                  {p.nextFree ? (
+                    <span className="g-mono text-ink-2">
+                      {p.nextFree.startLabel} – {p.nextFree.endLabel}
+                    </span>
+                  ) : (
+                    <span className="text-ink-4">Fully booked</span>
+                  )}
+                </td>
+                <td className="text-xs">
+                  {p.next ? (
+                    <>
+                      <span className="g-mono text-ink-3">{p.next.startLabel}</span>{' '}
+                      <span className="text-ink-2">{p.next.patientName}</span>
+                    </>
+                  ) : (
+                    <span className="text-ink-4">Day complete</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </div>
   );
 }
 

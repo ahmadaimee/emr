@@ -34,6 +34,15 @@ const DEFAULT_NAV: NavItem[] = [
     ],
   },
   { href: '/authorizations', label: 'Auth & Referrals', key: 'A' },
+  {
+    href: '/schedule',
+    label: 'Scheduling',
+    key: 'H',
+    children: [
+      { href: '/schedule', label: "Today's Book" },
+      { href: '/schedule?view=providers', label: 'Provider Availability' },
+    ],
+  },
   { href: '/patients', label: 'Patients & EHR', key: 'P' },
   { href: '/batches', label: 'Batch Management', key: 'B' },
   { href: '/reports', label: 'Reports', key: '' },
@@ -52,7 +61,7 @@ const SETTINGS = [
   { href: '/settings/users', label: 'Users & roles' },
 ];
 
-const STORAGE_KEY = 'grove_nav_order_v3';
+const STORAGE_KEY = 'grove_nav_order_v4';
 
 export function NavLinks({ openTasks }: { openTasks: number }) {
   const path = usePathname();
@@ -75,7 +84,7 @@ export function NavLinks({ openTasks }: { openTasks: number }) {
     try {
       const saved =
         localStorage.getItem(STORAGE_KEY) ||
-        localStorage.getItem('grove_nav_order_v2') ||
+        localStorage.getItem('grove_nav_order_v3') ||
         localStorage.getItem('grove_nav_order');
       if (saved) {
         const order: string[] = JSON.parse(saved).filter((h: string) => h !== '/remittances');

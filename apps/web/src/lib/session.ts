@@ -28,6 +28,8 @@ import {
   getMockClaimStatusData,
   getMockBatchesData,
   getMockProvidersData,
+  getMockScheduleData,
+  getMockTodayScheduleData,
   getMockOrganizationData,
   getMockEdiSettingsData,
   getMockFeeSchedulesData,
@@ -75,6 +77,12 @@ function resolveRouteFallback(route: string): any {
     const id = route.replace('/patients/', '').split('/')[0]!;
     return getMockPatientDetail(id);
   }
+  if (route === '/schedule') return getMockScheduleData();
+  if (route.startsWith('/schedule?')) {
+    const params = new URLSearchParams(route.slice(route.indexOf('?')));
+    return getMockScheduleData({ date: params.get('date') || undefined, providerId: params.get('provider') || undefined });
+  }
+  if (route === '/dashboard/today-schedule') return getMockTodayScheduleData();
   if (route === '/reports') return getMockReportsData();
   if (route === '/settings/automation') return getMockAutomationSettings();
   if (route === '/settings/rules') return getMockRulesData();
