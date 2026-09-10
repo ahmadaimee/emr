@@ -96,6 +96,9 @@ importers:
       '@grove/reporting':
         specifier: workspace:*
         version: link:../../packages/reporting
+      '@grove/rules':
+        specifier: workspace:*
+        version: link:../../packages/rules
       '@grove/ui':
         specifier: workspace:*
         version: link:../../packages/ui

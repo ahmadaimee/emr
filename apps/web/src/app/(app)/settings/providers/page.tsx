@@ -1,7 +1,9 @@
 import Link from 'next/link';
-import { Empty, Kpi, PageHeader, StatusPill, selectCls } from '@/components/ui';
+import { Empty, Kpi, PageHeader, selectCls } from '@/components/ui';
 import { pageContext } from '@/lib/session';
 import { NewProviderModal } from './new-provider-modal';
+import { EditProviderModal } from './edit-provider-modal';
+import { DeleteProviderButton, ProviderStatusSelect } from './provider-row-actions';
 
 export const metadata = { title: 'Provider Directory & NPI Roster' };
 
@@ -16,10 +18,12 @@ export default async function ProvidersPage({
   const data = await run('/settings/providers', async () => {
     return {
       providers: [],
+      practices: [],
+      statuses: [],
     };
   });
 
-  const { providers = [] } = data;
+  const { providers = [], practices = [], statuses = [] } = data;
 
   const filteredProviders = providers.filter((p: any) => {
     if (sp.q) {
@@ -56,8 +60,8 @@ export default async function ProvidersPage({
         <Kpi
           variant="primary"
           label="Active Clinical Providers"
-          value={providers.length}
-          hint="Enrolled in rosters"
+          value={providers.filter((p: any) => (p.status || 'active') === 'active').length}
+          hint={`${providers.length} on the roster`}
           badge="Roster"
         />
         <Kpi
@@ -156,6 +160,7 @@ export default async function ProvidersPage({
                 <th>Practice Affiliations</th>
                 <th>Contact</th>
                 <th>Status</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -216,7 +221,17 @@ export default async function ProvidersPage({
                     <div className="text-[11px] text-ink-3">{p.phone}</div>
                   </td>
                   <td>
-                    <StatusPill status={p.status || 'active'} />
+                    <ProviderStatusSelect id={p.id} status={p.status || 'active'} statuses={statuses} />
+                  </td>
+                  <td>
+                    <div className="flex items-center justify-end gap-1">
+                      <EditProviderModal provider={p} practices={practices} />
+                      <DeleteProviderButton
+                        id={p.id}
+                        name={`Dr. ${p.firstName} ${p.lastName}`}
+                        references={p.references ?? { claims: 0, appointments: 0, total: 0, deletable: false }}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

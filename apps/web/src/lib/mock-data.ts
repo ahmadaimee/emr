@@ -2130,7 +2130,9 @@ const GLOBAL_PROVIDERS: any[] = [
 
 export function getMockProvidersData() {
   return {
-    providers: [...GLOBAL_PROVIDERS],
+    providers: GLOBAL_PROVIDERS.map((p) => ({ ...p, references: getMockProviderReferences(p.id) })),
+    practices: GLOBAL_PRACTICES.map((pr) => ({ id: pr.id, name: pr.name })),
+    statuses: PROVIDER_STATUSES,
   };
 }
 
@@ -3714,4 +3716,73 @@ export function setMockAppointmentStatus(id: string, status: string) {
   const a = GLOBAL_APPOINTMENTS.find((x) => x.id === id);
   if (a) a.status = status;
   return a;
+}
+
+// ---------------------------------------------------------------------------
+// Provider record management
+// ---------------------------------------------------------------------------
+
+export const PROVIDER_STATUSES = [
+  { value: 'active', label: 'Active', hint: 'Rendering and billable' },
+  { value: 'inactive', label: 'Inactive', hint: 'Kept on file, not schedulable' },
+  { value: 'suspended', label: 'Suspended', hint: 'Licence or enrolment issue' },
+  { value: 'terminated', label: 'Terminated', hint: 'Left the practice' },
+];
+
+/**
+ * What still points at this provider. A provider's NPI appears on submitted claims and
+ * on the appointment book, and those references must stay resolvable for appeals,
+ * corrected claims and the audit trail — which is why a referenced provider is
+ * deactivated rather than deleted.
+ */
+export function getMockProviderReferences(id: string) {
+  const provider = GLOBAL_PROVIDERS.find((p) => p.id === id);
+  if (!provider) return { appointments: 0, claims: 0, total: 0, deletable: false };
+
+  const appointments = GLOBAL_APPOINTMENTS.filter((a) => a.providerId === id).length;
+  // The claims LIST does not carry provider NPIs — they live on the claim detail — so
+  // the reference count is taken from the detail of each claim, not the list row.
+  const claims = getMockClaimsData().rows.filter((r: any) => {
+    const c = getMockClaimDetail(r.c.id)?.a?.claim as any;
+    return c?.renderingProviderNpi === provider.npi || c?.billingProviderNpi === provider.npi;
+  }).length;
+
+  return { appointments, claims, total: appointments + claims, deletable: appointments + claims === 0 };
+}
+
+export function updateMockProvider(id: string, patch: Record<string, any>) {
+  const p = GLOBAL_PROVIDERS.find((x) => x.id === id);
+  if (!p) return null;
+  // id and npi history are not editable through the generic patch path; the NPI is
+  // changed deliberately by the caller after validation.
+  const { id: _ignored, ...rest } = patch;
+  Object.assign(p, rest);
+  if (rest.practiceNames && !rest.practiceIds) {
+    p.practiceIds = GLOBAL_PRACTICES.filter((pr) => rest.practiceNames.includes(pr.name)).map((pr) => pr.id);
+  }
+  return p;
+}
+
+export function setMockProviderStatus(id: string, status: string) {
+  const p = GLOBAL_PROVIDERS.find((x) => x.id === id);
+  if (!p) return null;
+  p.status = status;
+  // A provider who is not active cannot take new bookings.
+  if (status !== 'active') p.acceptingNewPatients = false;
+  return p;
+}
+
+/**
+ * Removes a provider outright. Refuses when anything still references them — the caller
+ * is expected to deactivate instead, which the UI offers.
+ */
+export function deleteMockProvider(id: string): { ok: boolean; reason?: string; refs?: ReturnType<typeof getMockProviderReferences> } {
+  const idx = GLOBAL_PROVIDERS.findIndex((x) => x.id === id);
+  if (idx === -1) return { ok: false, reason: 'not_found' };
+
+  const refs = getMockProviderReferences(id);
+  if (!refs.deletable) return { ok: false, reason: 'referenced', refs };
+
+  GLOBAL_PROVIDERS.splice(idx, 1);
+  return { ok: true };
 }
