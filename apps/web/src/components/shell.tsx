@@ -38,7 +38,7 @@ export function Shell({ children, user, org, openTasks }: { children: ReactNode;
         </div>
       </aside>
       <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-[1400px] px-6 py-5">{children}</div>
+        <div className="mx-auto max-w-[1920px] px-6 py-5">{children}</div>
       </main>
       <CommandPalette />
     </div>

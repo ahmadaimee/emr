@@ -162,7 +162,11 @@ export function HcfaFormViewer({
         </div>
       </div>
 
-      {/* Main Standard CMS-1500 Sheet Container */}
+      {/* Main Standard CMS-1500 Sheet Container. Zooming above 100% grows the box
+          visually without changing its layout footprint, so it is wrapped in its own
+          scroll container — otherwise the overflow bleeds into the page body and the
+          toolbar above scrolls out of view with it. */}
+      <div className="overflow-x-auto print:overflow-visible">
       <div
         style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
         className="mx-auto max-w-[880px] bg-white border border-neutral-300 shadow-xl p-4 sm:p-6 print:border-none print:shadow-none print:p-0 print:m-0 print:transform-none text-[10px] leading-tight font-sans text-neutral-900 transition-transform"
@@ -763,6 +767,7 @@ export function HcfaFormViewer({
         <div className="mt-2 text-center text-[7px] font-mono text-neutral-500 uppercase tracking-wider">
           FORM CMS-1500 (02/12) · APPROVED BY NATIONAL UNIFORM CLAIM COMMITTEE (NUCC) · ANSI ASC X12 837P COMPLIANT
         </div>
+      </div>
       </div>
     </div>
   );

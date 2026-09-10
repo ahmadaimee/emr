@@ -86,6 +86,10 @@ export function Ub04FormViewer({ claimId, data }: { claimId: string; data: any }
         </div>
       </div>
 
+      {/* Zooming above 100% grows the sheet visually without changing its layout
+          footprint, so it gets its own scroll container instead of bleeding into the
+          page body. */}
+      <div className="overflow-x-auto print:overflow-visible">
       <div
         className="origin-top bg-white p-3 text-neutral-950 shadow-sm"
         style={{ transform: `scale(${zoom / 100})` }}
@@ -389,6 +393,7 @@ export function Ub04FormViewer({ claimId, data }: { claimId: string; data: any }
             </span>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
