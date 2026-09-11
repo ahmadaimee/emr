@@ -70,6 +70,17 @@ body {
   border-bottom: 1px solid var(--g-line);
   white-space: nowrap;
 }
+/* `.g-table th`'s text-align above is plain (unlayered) CSS, same as Tailwind's
+   `@layer utilities` — but unlayered rules always beat layered ones regardless of
+   specificity or source order, so a header's `className="text-right"` silently did
+   nothing while its data cells below rendered correctly right-aligned. Match a header
+   to its numeric column with these attributes instead, mirroring the `td` convention. */
+.g-table th[data-numeric],
+.g-table th[data-type='money'],
+.g-table th[data-type='number'],
+.g-table th[data-align='right'] {
+  text-align: right;
+}
 .g-table td {
   height: var(--g-row-height);
   padding: 0 var(--g-cell-pad-x);

@@ -540,7 +540,7 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
                   <th>Entry Type</th>
                   <th>Responsibility</th>
                   <th>Note / Trace</th>
-                  <th className="text-right">Amount</th>
+                  <th data-type="money">Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -575,8 +575,8 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
                     <th>Payer</th>
                     <th>Check Date</th>
                     <th>Balancing Status</th>
-                    <th className="text-right">Total Charge</th>
-                    <th className="text-right">Paid</th>
+                    <th data-type="money">Total Charge</th>
+                    <th data-type="money">Paid</th>
                   </tr>
                 </thead>
                 <tbody>

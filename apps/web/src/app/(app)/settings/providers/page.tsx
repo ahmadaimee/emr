@@ -160,7 +160,7 @@ export default async function ProvidersPage({
                 <th>Practice Affiliations</th>
                 <th>Contact</th>
                 <th>Status</th>
-                <th className="text-right">Actions</th>
+                <th data-align="right">Actions</th>
               </tr>
             </thead>
             <tbody>

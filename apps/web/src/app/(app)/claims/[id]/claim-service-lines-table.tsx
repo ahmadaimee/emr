@@ -50,12 +50,12 @@ export function ClaimServiceLinesTable({ claimId, lines, diagnosisCodes, service
               <th>Mod</th>
               <th>Dx</th>
               <th>POS</th>
-              <th className="text-right">Units</th>
-              <th className="text-right">Charge</th>
-              <th className="text-right">Allowed</th>
-              <th className="text-right">Paid</th>
-              <th className="text-right">Balance</th>
-              {editable && <th className="text-right">Actions</th>}
+              <th data-numeric>Units</th>
+              <th data-type="money">Charge</th>
+              <th data-type="money">Allowed</th>
+              <th data-type="money">Paid</th>
+              <th data-type="money">Balance</th>
+              {editable && <th data-align="right">Actions</th>}
             </tr>
           </thead>
           <tbody>

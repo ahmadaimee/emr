@@ -195,11 +195,11 @@ export default async function FeeSchedulesPage({
                   <th>CPT Code</th>
                   <th>Mod</th>
                   <th>Description</th>
-                  <th className="text-right">Non-Facility Allowed</th>
-                  <th className="text-right">Facility Allowed</th>
-                  <th className="text-right">Standard Billed</th>
-                  <th className="text-right">Work RVU</th>
-                  <th className="text-right">Total RVU</th>
+                  <th data-type="money">Non-Facility Allowed</th>
+                  <th data-type="money">Facility Allowed</th>
+                  <th data-type="money">Standard Billed</th>
+                  <th data-align="right">Work RVU</th>
+                  <th data-align="right">Total RVU</th>
                   <th>Effective Date</th>
                 </tr>
               </thead>
@@ -293,9 +293,9 @@ export default async function FeeSchedulesPage({
                     <th>Clinical Description</th>
                     <th>Category</th>
                     <th>Global Days</th>
-                    <th className="text-right">Work RVU</th>
-                    <th className="text-right">Total RVU</th>
-                    <th className="text-right">Default Charge</th>
+                    <th data-align="right">Work RVU</th>
+                    <th data-align="right">Total RVU</th>
+                    <th data-type="money">Default Charge</th>
                     <th>Allowed POS</th>
                     <th>Status</th>
                   </tr>

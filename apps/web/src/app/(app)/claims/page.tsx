@@ -111,7 +111,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
         <div className="overflow-x-auto rounded-lg border border-line bg-surface-raised">
           <table className="g-table" data-bulk>
             <thead>
-              <tr><th className="w-8"></th><th>Claim</th><th>Patient</th><th>Payer</th><th>Practice</th><th>DOS</th><th>Status</th><th className="text-right">Charge</th><th className="text-right">Paid</th><th className="text-right">Balance</th><th>Filing deadline</th></tr>
+              <tr><th className="w-8"></th><th>Claim</th><th>Patient</th><th>Payer</th><th>Practice</th><th>DOS</th><th>Status</th><th data-type="money">Charge</th><th data-type="money">Paid</th><th data-type="money">Balance</th><th>Filing deadline</th></tr>
             </thead>
             <tbody>
               {rows.map(({ c, patientLast, patientFirst, payer, practice, errors }) => {

@@ -167,7 +167,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <Card title="Work queues">
             <table className="g-table">
               <thead>
-                <tr><th>Queue</th><th className="text-right">Open</th><th className="text-right">High priority</th><th className="text-right">Dollars</th></tr>
+                <tr><th>Queue</th><th data-numeric>Open</th><th data-numeric>High priority</th><th data-numeric>Dollars</th></tr>
               </thead>
               <tbody>
                 {data.queues.map((q) => (
@@ -244,10 +244,10 @@ function TodaySchedule({ today }: { today: any }) {
           <thead>
             <tr>
               <th>Provider</th>
-              <th className="text-right">Appts</th>
-              <th className="text-right">Done</th>
-              <th className="text-right">Left</th>
-              <th className="text-right">Free</th>
+              <th data-numeric>Appts</th>
+              <th data-numeric>Done</th>
+              <th data-numeric>Left</th>
+              <th data-numeric>Free</th>
               <th>Next open slot</th>
               <th>Next patient</th>
             </tr>
