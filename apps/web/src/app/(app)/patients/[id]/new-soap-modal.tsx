@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { createSoapNote } from '../actions';
 
-export function NewSoapModal({ patientId }: { patientId: string }) {
+export function NewSoapModal({ patientId, signerName }: { patientId: string; signerName: string }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -217,7 +217,7 @@ export function NewSoapModal({ patientId }: { patientId: string }) {
               <div className="flex items-center gap-2 rounded-md border border-line bg-surface-sunken p-2.5">
                 <input type="checkbox" id="signNote" name="signed" defaultChecked className="rounded border-line-strong text-grove" />
                 <label htmlFor="signNote" className="text-xs text-ink-2 cursor-pointer select-none">
-                  Electronically sign and seal clinical note as Attending Physician (Dr. Marcus Vance, MD)
+                  Electronically sign and seal clinical note as {signerName}
                 </label>
               </div>
 

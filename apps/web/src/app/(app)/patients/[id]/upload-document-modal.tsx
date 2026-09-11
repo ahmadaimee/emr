@@ -117,9 +117,8 @@ export function UploadDocumentModal({ patientId }: { patientId: string }) {
 
               <div className="rounded-md border border-line bg-surface-sunken p-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-ok font-bold text-xs">🔒</span>
                   <span className="text-[11px] text-ink-2">
-                    HIPAA Compliance: File is encrypted at rest with AES-256, hash verified, and logged in audit trail.
+                    HIPAA compliance: file is encrypted at rest with AES-256, hash verified, and logged in the audit trail.
                   </span>
                 </div>
               </div>

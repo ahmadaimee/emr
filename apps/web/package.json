@@ -19,7 +19,9 @@
     "@grove/forms": "workspace:*",
     "@grove/reporting": "workspace:*",
     "@grove/rules": "workspace:*",
+    "@grove/storage": "workspace:*",
     "@grove/ui": "workspace:*",
+    "@grove/x12": "workspace:*",
     "next": "16.3.4",
     "react": "19.3.0",
     "react-dom": "19.3.0"

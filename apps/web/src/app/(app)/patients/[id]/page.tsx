@@ -39,55 +39,131 @@ export default async function PatientDetailPage({
     if (!patient) return null;
     phi.touch([id], ['demographics', 'financial', 'clinical']);
 
-    const coverages = await ctx.tx
-      .select({
-        c: schema.coverages,
-        payerName: schema.payers.name,
-      })
-      .from(schema.coverages)
-      .innerJoin(schema.payers, eq(schema.payers.id, schema.coverages.payerId))
-      .where(eq(schema.coverages.patientId, id))
-      .orderBy(schema.coverages.rank);
+    const signerUserId = ctx.actor?.userId;
 
-    const claims = await ctx.tx
-      .select({
-        c: schema.claims,
-        payerName: schema.payers.name,
-      })
-      .from(schema.claims)
-      .innerJoin(schema.payers, eq(schema.payers.id, schema.claims.payerId))
-      .where(eq(schema.claims.patientId, id))
-      .orderBy(desc(schema.claims.createdAt))
-      .limit(20);
+    // Independent reads once we know the patient exists — run in parallel rather than
+    // paying a network round-trip to the database for each one in sequence.
+    const [coverages, claims, ledger, payers, statements, noteRows, docRows, signerRows] = await Promise.all([
+      ctx.tx
+        .select({
+          c: schema.coverages,
+          payerName: schema.payers.name,
+        })
+        .from(schema.coverages)
+        .innerJoin(schema.payers, eq(schema.payers.id, schema.coverages.payerId))
+        .where(eq(schema.coverages.patientId, id))
+        .orderBy(schema.coverages.rank),
 
-    const ledger = await ctx.tx
-      .select()
-      .from(schema.ledgerEntries)
-      .where(eq(schema.ledgerEntries.patientId, id))
-      .orderBy(desc(schema.ledgerEntries.createdAt))
-      .limit(30);
+      ctx.tx
+        .select({
+          c: schema.claims,
+          payerName: schema.payers.name,
+        })
+        .from(schema.claims)
+        .innerJoin(schema.payers, eq(schema.payers.id, schema.claims.payerId))
+        .where(eq(schema.claims.patientId, id))
+        .orderBy(desc(schema.claims.createdAt))
+        .limit(20),
 
-    const payers = await ctx.tx
-      .select({ id: schema.payers.id, name: schema.payers.name })
-      .from(schema.payers);
+      ctx.tx
+        .select()
+        .from(schema.ledgerEntries)
+        .where(eq(schema.ledgerEntries.patientId, id))
+        .orderBy(desc(schema.ledgerEntries.createdAt))
+        .limit(30),
+
+      ctx.tx.select({ id: schema.payers.id, name: schema.payers.name }).from(schema.payers),
+
+      ctx.tx
+        .select()
+        .from(schema.patientStatements)
+        .where(eq(schema.patientStatements.patientId, id))
+        .orderBy(desc(schema.patientStatements.statementDate))
+        .limit(20),
+
+      ctx.tx
+        .select({ n: schema.clinicalNotes, authorFirstName: schema.users.firstName, authorLastName: schema.users.lastName })
+        .from(schema.clinicalNotes)
+        .innerJoin(schema.users, eq(schema.users.id, schema.clinicalNotes.authorUserId))
+        .where(eq(schema.clinicalNotes.patientId, id))
+        .orderBy(desc(schema.clinicalNotes.serviceDate), desc(schema.clinicalNotes.createdAt)),
+
+      ctx.tx
+        .select({ d: schema.documents, uploaderFirstName: schema.users.firstName, uploaderLastName: schema.users.lastName })
+        .from(schema.documentLinks)
+        .innerJoin(schema.documents, eq(schema.documents.id, schema.documentLinks.documentId))
+        .leftJoin(schema.users, eq(schema.users.id, schema.documents.uploadedBy))
+        .where(eq(schema.documentLinks.patientId, id))
+        .orderBy(desc(schema.documents.createdAt)),
+
+      signerUserId
+        ? ctx.tx
+            .select({ firstName: schema.users.firstName, lastName: schema.users.lastName })
+            .from(schema.users)
+            .where(eq(schema.users.id, signerUserId))
+        : Promise.resolve([]),
+    ]);
+    const [signer] = signerRows;
 
     return {
+      signerName: signer ? `${signer.firstName} ${signer.lastName}` : 'the signed-in clinician',
       patient,
       coverages,
       claims,
       ledger,
       payers,
-      soapNotes: [],
-      medicalHistory: { conditions: [], surgeries: [], family: [], social: {} },
+      statements,
+      soapNotes: noteRows.map((r) => ({
+        id: r.n.id,
+        serviceDate: r.n.serviceDate,
+        status: r.n.status,
+        authorName: `${r.authorFirstName} ${r.authorLastName}`,
+        signedAt: r.n.signedAt,
+        vitals: {
+          bloodPressure: r.n.bloodPressureSystolic && r.n.bloodPressureDiastolic ? `${r.n.bloodPressureSystolic}/${r.n.bloodPressureDiastolic} mmHg` : '—',
+          heartRate: r.n.heartRate ? `${r.n.heartRate} bpm` : '—',
+          temperature: r.n.temperatureF ? `${r.n.temperatureF} °F` : '—',
+          respiratoryRate: r.n.respiratoryRate ? `${r.n.respiratoryRate} /min` : '—',
+          spo2: r.n.spo2 ? `${r.n.spo2}%` : '—',
+          weightLbs: r.n.weightLbs ? `${r.n.weightLbs} lbs` : '—',
+          heightInches: r.n.heightInches ? `${r.n.heightInches} in` : '—',
+        },
+        subjective: r.n.subjective,
+        objective: r.n.objective,
+        primaryDiagnosisCode: r.n.primaryDiagnosisCode,
+        primaryDiagnosisDescription: r.n.primaryDiagnosisDescription,
+        plan: r.n.plan,
+      })),
+      medicalHistory: { conditions: [] as any[], surgeries: [] as any[], family: [] as any[], social: {} as { tobacco?: string; alcohol?: string; occupation?: string; exercise?: string } },
       allergies: [],
       medications: [],
-      documents: [],
+      documents: docRows.map((r) => ({
+        id: r.d.id,
+        title: r.d.displayName,
+        category: r.d.kind,
+        mimeType: r.d.contentType,
+        fileSizeKb: Math.ceil(r.d.byteSize / 1024),
+        uploadedAt: r.d.createdAt,
+        uploadedBy: r.uploaderFirstName ? `${r.uploaderFirstName} ${r.uploaderLastName}` : 'Unknown',
+      })),
     };
   });
 
   if (!data) notFound();
-  const { patient, coverages, claims, ledger, payers, soapNotes = [], medicalHistory = { conditions: [], surgeries: [], family: [], social: {} }, allergies = [], medications = [], documents = [] } = data;
-  const p = patient.p;
+  const { patient, coverages, claims, ledger, payers, statements = [], soapNotes = [], medicalHistory = { conditions: [], surgeries: [], family: [], social: {} }, allergies = [], medications = [], documents = [], signerName } = data;
+  const p = patient.p as any;
+
+  // The ledger is append-only and stores only the signed amount of each entry, not a
+  // running balance — derive one for display by accumulating oldest-first, then
+  // restoring the fetched (most-recent-first) order.
+  const ledgerWithBalance = [...ledger]
+    .reverse()
+    .reduce<{ entry: (typeof ledger)[number]; balanceAfterCents: number }[]>((acc, entry) => {
+      const prior = acc.length ? acc[acc.length - 1]!.balanceAfterCents : 0;
+      acc.push({ entry, balanceAfterCents: prior + entry.amountCents });
+      return acc;
+    }, [])
+    .reverse();
 
   return (
     <>
@@ -126,7 +202,7 @@ export default async function PatientDetailPage({
               }))}
               initialPrimaryId={id}
             />
-            <NewSoapModal patientId={id} />
+            <NewSoapModal patientId={id} signerName={signerName} />
             <UploadDocumentModal patientId={id} />
             <AddCoverageModal patientId={id} payers={payers} />
           </div>
@@ -201,65 +277,62 @@ export default async function PatientDetailPage({
                 title={
                   <div className="flex items-center justify-between w-full">
                     <span className="font-semibold text-ink">
-                      Clinical Encounter — {date(note.encounterDate)}
+                      Clinical Encounter — {date(note.serviceDate)}
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded bg-ok-soft px-2 py-0.5 text-[11px] font-medium text-ok">
-                      <span>✓ Signed & Sealed</span>
-                      <span className="opacity-70">by {note.providerName}</span>
-                    </span>
+                    {note.status === 'signed' ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-ok-soft px-2 py-0.5 text-[11px] font-medium text-ok">
+                        <span>✓ Signed</span>
+                        <span className="opacity-70">by {note.authorName}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded bg-warn-soft px-2 py-0.5 text-[11px] font-medium text-warn">
+                        <span>Draft</span>
+                        <span className="opacity-70">by {note.authorName}</span>
+                      </span>
+                    )}
                   </div>
                 }
               >
                 {/* Vitals Ribbon */}
-                {note.vitals && (
-                  <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg border border-line bg-surface-sunken/40 p-3 sm:grid-cols-4 lg:grid-cols-8 text-xs">
-                    <div>
-                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">BP</span>
-                      <span className="font-mono font-medium text-ink">{note.vitals.bloodPressure}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">Heart Rate</span>
-                      <span className="font-mono font-medium text-ink">{note.vitals.heartRate}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">Temp</span>
-                      <span className="font-mono font-medium text-ink">{note.vitals.temperature}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">SpO2</span>
-                      <span className="font-mono font-medium text-ink">{note.vitals.spo2}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">Resp Rate</span>
-                      <span className="font-mono font-medium text-ink">{note.vitals.respiratoryRate}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">Weight</span>
-                      <span className="font-mono font-medium text-ink">{note.vitals.weightLbs}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">Height</span>
-                      <span className="font-mono font-medium text-ink">{note.vitals.heightInches}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase text-ink-4 block font-semibold">BMI</span>
-                      <span className="font-mono font-medium text-ink">{note.vitals.bmi}</span>
-                    </div>
+                <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg border border-line bg-surface-sunken/40 p-3 sm:grid-cols-4 lg:grid-cols-7 text-xs">
+                  <div>
+                    <span className="text-[10px] uppercase text-ink-4 block font-semibold">BP</span>
+                    <span className="font-mono font-medium text-ink">{note.vitals.bloodPressure}</span>
                   </div>
-                )}
+                  <div>
+                    <span className="text-[10px] uppercase text-ink-4 block font-semibold">Heart Rate</span>
+                    <span className="font-mono font-medium text-ink">{note.vitals.heartRate}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-ink-4 block font-semibold">Temp</span>
+                    <span className="font-mono font-medium text-ink">{note.vitals.temperature}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-ink-4 block font-semibold">SpO2</span>
+                    <span className="font-mono font-medium text-ink">{note.vitals.spo2}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-ink-4 block font-semibold">Resp Rate</span>
+                    <span className="font-mono font-medium text-ink">{note.vitals.respiratoryRate}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-ink-4 block font-semibold">Weight</span>
+                    <span className="font-mono font-medium text-ink">{note.vitals.weightLbs}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-ink-4 block font-semibold">Height</span>
+                    <span className="font-mono font-medium text-ink">{note.vitals.heightInches}</span>
+                  </div>
+                </div>
 
-                {/* S / O / A / P Structured Blocks */}
+                {/* S / O / A / P Blocks */}
                 <div className="space-y-3 text-xs leading-relaxed">
                   <div className="rounded-md border border-line p-3 bg-surface">
                     <div className="font-bold text-ink mb-1 flex items-center gap-1.5">
                       <span className="rounded bg-grove-soft px-1.5 py-0.5 text-grove-strong font-mono font-bold">S</span>
                       <span>Subjective</span>
                     </div>
-                    <div className="text-ink-2">
-                      <p className="font-medium text-ink mb-1">Chief Complaint: {note.subjective.chiefComplaint}</p>
-                      <p className="mb-1">{note.subjective.hpi}</p>
-                      <p className="text-ink-3 italic">{note.subjective.ros}</p>
-                    </div>
+                    <p className="text-ink-2">{note.subjective}</p>
                   </div>
 
                   <div className="rounded-md border border-line p-3 bg-surface">
@@ -267,45 +340,34 @@ export default async function PatientDetailPage({
                       <span className="rounded bg-grove-soft px-1.5 py-0.5 text-grove-strong font-mono font-bold">O</span>
                       <span>Objective</span>
                     </div>
-                    <p className="text-ink-2">{note.objective.exam}</p>
+                    <p className="text-ink-2">{note.objective}</p>
                   </div>
 
                   <div className="rounded-md border border-line p-3 bg-surface">
                     <div className="font-bold text-ink mb-1 flex items-center gap-1.5">
                       <span className="rounded bg-grove-soft px-1.5 py-0.5 text-grove-strong font-mono font-bold">A</span>
-                      <span>Assessment & Diagnoses</span>
+                      <span>Assessment</span>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-1.5">
-                      {note.assessment.map((a: any) => (
-                        <span
-                          key={a.icd10}
-                          className="inline-flex items-center gap-1.5 rounded border border-line bg-surface-sunken px-2 py-1 font-sans"
-                        >
-                          <span className="font-mono font-bold text-grove-strong">{a.icd10}</span>
-                          <span className="text-ink">{a.description}</span>
-                          <span className="text-[10px] text-ink-4 uppercase">({a.status})</span>
-                        </span>
-                      ))}
-                    </div>
+                    <span className="inline-flex items-center gap-1.5 rounded border border-line bg-surface-sunken px-2 py-1 font-sans">
+                      <span className="font-mono font-bold text-grove-strong">{note.primaryDiagnosisCode}</span>
+                      <span className="text-ink">{note.primaryDiagnosisDescription}</span>
+                    </span>
                   </div>
 
                   <div className="rounded-md border border-line p-3 bg-surface">
                     <div className="font-bold text-ink mb-1 flex items-center gap-1.5">
                       <span className="rounded bg-grove-soft px-1.5 py-0.5 text-grove-strong font-mono font-bold">P</span>
-                      <span>Plan & Orders</span>
+                      <span>Plan</span>
                     </div>
-                    <div className="space-y-1 text-ink-2">
-                      <p><span className="font-semibold text-ink">Prescriptions:</span> {note.plan.medications}</p>
-                      <p><span className="font-semibold text-ink">Diagnostic & Therapy Orders:</span> {note.plan.orders}</p>
-                      <p><span className="font-semibold text-ink">Patient Instructions:</span> {note.plan.instructions}</p>
-                    </div>
+                    <p className="text-ink-2">{note.plan}</p>
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between border-t border-line pt-2 text-[11px] text-ink-4">
-                  <span>Provider NPI: <span className="font-mono">{note.providerNpi}</span></span>
-                  <span>Signed at: {relative(note.signedAt)}</span>
-                </div>
+                {note.signedAt && (
+                  <div className="mt-3 flex items-center justify-end border-t border-line pt-2 text-[11px] text-ink-4">
+                    <span>Signed {relative(note.signedAt)}</span>
+                  </div>
+                )}
               </Card>
             ))
           )}
@@ -324,8 +386,7 @@ export default async function PatientDetailPage({
                 {allergies.map((alg: any) => (
                   <div key={alg.id} className="p-3 text-xs flex items-start justify-between">
                     <div>
-                      <div className="font-semibold text-ink flex items-center gap-1.5">
-                        <span className="text-danger font-bold">⚠️</span>
+                      <div className="font-semibold text-ink">
                         <span>{alg.allergen}</span>
                       </div>
                       <div className="text-ink-3 mt-0.5">Reaction: {alg.reaction}</div>
@@ -451,8 +512,7 @@ export default async function PatientDetailPage({
                 <tbody className="divide-y divide-line text-xs">
                   {documents.map((doc: any) => (
                     <tr key={doc.id} className="hover:bg-surface-sunken/40">
-                      <td className="px-3 py-2.5 font-medium text-ink flex items-center gap-2">
-                        <span className="text-base">{doc.mimeType?.includes('pdf') ? '📄' : '🖼️'}</span>
+                      <td className="px-3 py-2.5 font-medium text-ink">
                         <span>{doc.title}</span>
                       </td>
                       <td className="px-3 py-2.5">
@@ -470,7 +530,7 @@ export default async function PatientDetailPage({
                         {doc.uploadedBy}
                       </td>
                       <td className="px-3 py-2.5 text-right">
-                        <DocumentViewButton title={doc.title} />
+                        <DocumentViewButton documentId={doc.id} title={doc.title} />
                       </td>
                     </tr>
                   ))}
@@ -517,7 +577,7 @@ export default async function PatientDetailPage({
                         )}
                       </div>
                     </div>
-                    <StatusPill status={c.status} />
+                    <StatusPill status={c.active ? 'active' : 'inactive'} />
                   </div>
                 ))}
               </div>
@@ -585,13 +645,13 @@ export default async function PatientDetailPage({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line text-xs font-mono">
-                    {ledger.map((entry) => (
+                    {ledgerWithBalance.map(({ entry, balanceAfterCents }) => (
                       <tr key={entry.id} className="hover:bg-surface-sunken/40 font-sans">
                         <td className="px-3 py-2 text-xs text-ink-3">{date(entry.createdAt)}</td>
                         <td className="px-3 py-2 uppercase text-[11px] font-semibold text-ink-2">
                           {entry.entryType.replace('_', ' ')}
                         </td>
-                        <td className="px-3 py-2 text-ink-2">{entry.description ?? '—'}</td>
+                        <td className="px-3 py-2 text-ink-2">{entry.note ?? '—'}</td>
                         <td
                           className={`px-3 py-2 text-right font-semibold ${
                             entry.amountCents < 0 ? 'text-ok' : 'text-ink'
@@ -600,8 +660,42 @@ export default async function PatientDetailPage({
                           <Money cents={entry.amountCents} />
                         </td>
                         <td className="px-3 py-2 text-right font-semibold text-ink">
-                          <Money cents={entry.balanceAfterCents} />
+                          <Money cents={balanceAfterCents} />
                         </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {/* Statements sent */}
+          <Card title={`Patient Statements (${statements.length})`}>
+            {statements.length === 0 ? (
+              <Empty title="No statements sent" body="Statements generated from Payments → Patient Statements will appear here once one is sent to this patient." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-line bg-surface-sunken/40 text-xs font-medium text-ink-3">
+                    <tr>
+                      <th className="px-3 py-2">Statement #</th>
+                      <th className="px-3 py-2 text-center">Cycle</th>
+                      <th className="px-3 py-2">Date / Due</th>
+                      <th className="px-3 py-2 text-right">Balance Due</th>
+                      <th className="px-3 py-2">Sent</th>
+                      <th className="px-3 py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line text-xs">
+                    {statements.map((s) => (
+                      <tr key={s.id} className="hover:bg-surface-sunken/40">
+                        <td className="px-3 py-2 font-mono font-medium text-grove-strong">{s.statementNumber}</td>
+                        <td className="px-3 py-2 text-center g-num">{s.cycleNumber}</td>
+                        <td className="px-3 py-2 text-ink-3">{date(s.statementDate)} → {date(s.dueDate)}</td>
+                        <td className="px-3 py-2 text-right font-medium"><Money cents={s.balanceDueCents} /></td>
+                        <td className="px-3 py-2 text-ink-3">{s.sentAt ? relative(s.sentAt) : '—'}</td>
+                        <td className="px-3 py-2"><StatusPill status={s.status} /></td>
                       </tr>
                     ))}
                   </tbody>
