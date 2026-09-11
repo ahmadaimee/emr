@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { eq, schema, sql } from '@grove/db';
 import { Card, Kpi, PageHeader } from '@/components/ui';
 import { pageContext } from '@/lib/session';
@@ -35,6 +36,13 @@ export default async function OrganizationPage() {
 
   return (
     <>
+      <div className="mb-2 text-xs text-ink-3">
+        <Link href="/settings/setup" className="hover:underline">
+          Practice Setup
+        </Link>{' '}
+        / Organization & Practice Locations
+      </div>
+
       <PageHeader
         title="Organization & Practice Locations"
         subtitle="The billing company's legal identity, and every client practice (group NPI) and service location it bills for."

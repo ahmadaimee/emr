@@ -25,6 +25,13 @@ export default async function EdiSettingsPage() {
 
   return (
     <>
+      <div className="mb-2 text-xs text-ink-3">
+        <Link href="/settings/setup" className="hover:underline">
+          Practice Setup
+        </Link>{' '}
+        / EDI & Clearinghouse
+      </div>
+
       <PageHeader
         title="EDI Clearinghouse & Billing Setup"
         subtitle="ANSI ASC X12 5010 submitter identity, connector status, and real-time delivery. See Clearinghouse Setup in the engineering vault for how to go live."

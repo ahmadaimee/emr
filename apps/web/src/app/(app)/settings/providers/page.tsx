@@ -49,6 +49,13 @@ export default async function ProvidersPage({
 
   return (
     <>
+      <div className="mb-2 text-xs text-ink-3">
+        <Link href="/settings/setup" className="hover:underline">
+          Practice Setup
+        </Link>{' '}
+        / Provider Directory
+      </div>
+
       <PageHeader
         title="Provider Directory & Billing Credentials"
         subtitle="Manage clinician rosters, individual NPI identifiers, specialty taxonomy codes, and clearinghouse billing privileges."

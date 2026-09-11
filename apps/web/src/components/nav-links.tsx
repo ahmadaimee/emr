@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { NAV_ICONS } from './nav-icons';
 
 export interface SubItem {
   href: string;
@@ -52,21 +53,21 @@ const DEFAULT_NAV: NavItem[] = [
 ];
 
 const SETTINGS = [
-  { href: '/settings/setup', label: 'Practice Setup' },
-  { href: '/settings/automation', label: 'Automation' },
-  { href: '/settings/claim-statuses', label: 'Claim Statuses' },
-  { href: '/settings/rules', label: 'Rules & Denial Engine' },
-  { href: '/settings/fee-schedules', label: 'Fee Schedules & Coding' },
-  { href: '/settings/providers', label: 'Providers' },
-  { href: '/settings/organization', label: 'Organization & Practices' },
-  { href: '/settings/edi', label: 'Billing & EDI Setups' },
-  { href: '/settings/audit', label: 'Audit log' },
-  { href: '/settings/users', label: 'Users & roles' },
+  { href: '/settings/setup', label: 'Practice Setup', icon: 'setup' },
+  { href: '/settings/automation', label: 'Automation', icon: 'automation' },
+  { href: '/settings/claim-statuses', label: 'Claim Statuses', icon: 'claim-statuses' },
+  { href: '/settings/rules', label: 'Rules & Denial Engine', icon: 'rules' },
+  { href: '/settings/fee-schedules', label: 'Fee Schedules & Coding', icon: 'fee-schedules' },
+  { href: '/settings/providers', label: 'Providers', icon: 'providers' },
+  { href: '/settings/organization', label: 'Organization & Practices', icon: 'organization' },
+  { href: '/settings/edi', label: 'Billing & EDI Setups', icon: 'edi' },
+  { href: '/settings/audit', label: 'Audit log', icon: 'audit' },
+  { href: '/settings/users', label: 'Users & roles', icon: 'users' },
 ];
 
 const STORAGE_KEY = 'grove_nav_order_v4';
 
-export function NavLinks({ openTasks }: { openTasks: number }) {
+export function NavLinks({ openTasks, collapsed = false }: { openTasks: number; collapsed?: boolean }) {
   const path = usePathname();
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -188,27 +189,32 @@ export function NavLinks({ openTasks }: { openTasks: number }) {
         <div className="flex items-center">
           <Link
             href={n.href}
-            className={`group flex h-8 flex-1 items-center justify-between rounded-md px-2 text-sm cursor-grab active:cursor-grabbing transition-colors ${
+            className={`group flex h-8 flex-1 items-center rounded-md text-sm cursor-grab active:cursor-grabbing transition-colors ${
+              collapsed ? 'justify-center px-0' : 'justify-between px-2'
+            } ${
               isDirectActive
                 ? 'bg-grove-soft font-medium text-grove-strong'
                 : isParentActive
                 ? 'font-medium text-ink bg-surface-sunken/60'
                 : 'text-ink-2 hover:bg-surface-sunken hover:text-ink'
             }`}
-            title="Drag to reorder tabs"
+            title={collapsed ? n.label : 'Drag to reorder tabs'}
           >
-            <div className="flex items-center gap-1.5 truncate">
-              {/* Grip handle */}
-              <span className="text-ink-4 opacity-0 group-hover:opacity-100 transition-opacity text-xs select-none">
-                ⋮⋮
-              </span>
-              <span className="truncate">{n.label}</span>
+            <div className={`flex items-center gap-1.5 truncate ${collapsed ? 'justify-center' : ''}`}>
+              {NAV_ICONS[n.href]}
+              {!collapsed && (
+                <>
+                  {/* Grip handle */}
+                  <span className="text-ink-4 opacity-0 group-hover:opacity-100 transition-opacity text-xs select-none">
+                    ⋮⋮
+                  </span>
+                  <span className="truncate">{n.label}</span>
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {extra}
-            </div>
+            {!collapsed && <div className="flex items-center gap-1 shrink-0">{extra}</div>}
           </Link>
-          {hasChildren ? (
+          {hasChildren && !collapsed ? (
             <button
               type="button"
               onClick={(e) => toggleGroup(n.href, e)}
@@ -232,7 +238,7 @@ export function NavLinks({ openTasks }: { openTasks: number }) {
           ) : null}
         </div>
 
-        {hasChildren && isExpanded && n.children ? (
+        {hasChildren && isExpanded && n.children && !collapsed ? (
           <div
             className="ml-4 mt-0.5 space-y-0.5 border-l border-line pl-2 py-0.5"
             draggable={false}
@@ -271,19 +277,23 @@ export function NavLinks({ openTasks }: { openTasks: number }) {
     );
   };
 
-  const settingsItem = (href: string, label: string) => {
+  const settingsItem = (href: string, label: string, icon: string) => {
     const active = path === href || path.startsWith(href);
     return (
       <Link
         key={href}
         href={href}
-        className={`group flex h-8 items-center justify-between rounded-md px-2.5 text-sm ${
+        title={collapsed ? label : undefined}
+        className={`group flex h-8 items-center rounded-md text-sm ${collapsed ? 'justify-center px-0' : 'justify-between px-2.5'} ${
           active
             ? 'bg-grove-soft font-medium text-grove-strong'
             : 'text-ink-2 hover:bg-surface-sunken hover:text-ink'
         }`}
       >
-        <span>{label}</span>
+        <span className={`flex items-center gap-1.5 truncate ${collapsed ? 'justify-center' : ''}`}>
+          {NAV_ICONS[icon]}
+          {!collapsed && label}
+        </span>
       </Link>
     );
   };
@@ -304,11 +314,13 @@ export function NavLinks({ openTasks }: { openTasks: number }) {
         )}
       </div>
 
-      <div className="mt-5 px-2.5 flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-ink-4">
-        <span>Settings</span>
-      </div>
-      <div className="mt-1 space-y-0.5">
-        {SETTINGS.map((s) => settingsItem(s.href, s.label))}
+      {!collapsed && (
+        <div className="mt-5 px-2.5 flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-ink-4">
+          <span>Settings</span>
+        </div>
+      )}
+      <div className={`space-y-0.5 ${collapsed ? 'mt-3 border-t border-line pt-3' : 'mt-1'}`}>
+        {SETTINGS.map((s) => settingsItem(s.href, s.label, s.icon))}
       </div>
     </>
   );

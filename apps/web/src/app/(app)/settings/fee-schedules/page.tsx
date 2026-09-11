@@ -78,6 +78,13 @@ export default async function FeeSchedulesPage({
 
   return (
     <>
+      <div className="mb-2 text-xs text-ink-3">
+        <Link href="/settings/setup" className="hover:underline">
+          Practice Setup
+        </Link>{' '}
+        / Fee Schedules, CPT &amp; Dx
+      </div>
+
       <PageHeader
         title="Fee Schedules, CPT & Diagnosis (Dx) Management"
         subtitle="eCW-style clinical chargemaster, payer contract allowable schedules, CPT/HCPCS procedure codes, and ICD-10 diagnostic library."
