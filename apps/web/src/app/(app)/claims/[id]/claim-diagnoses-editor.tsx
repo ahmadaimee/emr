@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { inputCls } from '@/components/ui';
+import { CodeAutocomplete } from '@/components/code-autocomplete';
+import { searchDiagnosisCodes } from '@/lib/code-lookup';
 import { updateClaimDiagnosesAction } from './edit-actions';
 
 export function ClaimDiagnosesEditor({ claimId, diagnosisCodes, editable }: { claimId: string; diagnosisCodes: string[]; editable: boolean }) {
@@ -61,20 +63,21 @@ export function ClaimDiagnosesEditor({ claimId, diagnosisCodes, editable }: { cl
       </div>
 
       {editable && (
-        <div className="flex items-center gap-1.5 mt-2">
-          <input
-            value={newCode}
-            onChange={(e) => setNewCode(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addCode();
-              }
-            }}
-            placeholder="Add ICD-10 code (e.g. M54.5)"
-            disabled={isPending || codes.length >= 12}
-            className={inputCls}
-          />
+        <div className="flex items-start gap-1.5 mt-2">
+          <div className="flex-1" onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              addCode();
+            }
+          }}>
+            <CodeAutocomplete
+              value={newCode}
+              onChange={setNewCode}
+              search={searchDiagnosisCodes}
+              placeholder="Add ICD-10 code (e.g. M5450)"
+              className={inputCls}
+            />
+          </div>
           <button
             type="button"
             disabled={isPending || !newCode.trim() || codes.length >= 12}

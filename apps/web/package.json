@@ -14,6 +14,7 @@
     "@grove/audit": "workspace:*",
     "@grove/auth": "workspace:*",
     "@grove/clearinghouse": "workspace:*",
+    "@grove/codes": "workspace:*",
     "@grove/db": "workspace:*",
     "@grove/domain": "workspace:*",
     "@grove/forms": "workspace:*",

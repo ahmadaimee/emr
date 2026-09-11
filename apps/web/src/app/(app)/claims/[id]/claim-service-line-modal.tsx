@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { CodeAutocomplete } from '@/components/code-autocomplete';
+import { searchProcedureCodes } from '@/lib/code-lookup';
 import { addClaimServiceLineAction, updateClaimServiceLineAction, type ServiceLineInput } from './edit-actions';
 
 interface ExistingLine {
@@ -94,9 +96,10 @@ export function ServiceLineModal({ claimId, diagnosisCodes, line, trigger }: Ser
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-ink-2 mb-1">CPT / HCPCS Code</label>
-                  <input
+                  <CodeAutocomplete
                     value={procedureCode}
-                    onChange={(e) => setProcedureCode(e.target.value)}
+                    onChange={setProcedureCode}
+                    search={searchProcedureCodes}
                     placeholder="e.g. 99214"
                     className="w-full h-8 rounded-md border border-line-strong bg-surface px-2.5 text-xs font-mono text-ink focus:border-grove"
                   />

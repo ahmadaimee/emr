@@ -136,6 +136,31 @@ export function parseReasonCodes(text: string, codeType: 'CARC' | 'RARC'): Reaso
   return out;
 }
 
+export interface ProcedureRow {
+  code: string;
+  description: string;
+  shortDescription: string | null;
+}
+
+/**
+ * Generic procedure-code CSV: Code, Description, Short Description (header row present).
+ * Used for both HCPCS Level II (public domain — export straight from the CMS HCPCS
+ * quarterly file) and CPT (Level I) — for CPT, this must be built from your own
+ * AMA-licensed data file; this loader has no opinion on where the CSV came from, but
+ * `procedureCodes.description` may only be populated for an org whose AMA distributor
+ * licence is on file. Never construct this file from scraped or unlicensed sources.
+ */
+export function parseProcedureCodes(text: string): ProcedureRow[] {
+  const rows = parseCsv(text);
+  const out: ProcedureRow[] = [];
+  for (const r of rows.slice(1)) {
+    const [code, description, shortDescription] = r;
+    if (!code || !description) continue;
+    out.push({ code: code.trim().toUpperCase(), description: description.trim(), shortDescription: shortDescription?.trim() || null });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 
 /** RFC 4180-ish CSV: quoted fields, doubled quotes, CRLF or LF. */

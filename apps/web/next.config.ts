@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@grove/ui', '@grove/db', '@grove/domain', '@grove/auth', '@grove/audit', '@grove/reporting', '@grove/clearinghouse', '@grove/x12', '@grove/rules', '@grove/storage'],
+  transpilePackages: ['@grove/ui', '@grove/db', '@grove/domain', '@grove/auth', '@grove/audit', '@grove/reporting', '@grove/clearinghouse', '@grove/x12', '@grove/rules', '@grove/storage', '@grove/codes'],
   // Server-only packages must not be bundled for the client.
   serverExternalPackages: ['postgres', '@node-rs/argon2', 'pg-boss', '@aws-sdk/client-s3', '@aws-sdk/s3-request-presigner'],
   poweredByHeader: false,

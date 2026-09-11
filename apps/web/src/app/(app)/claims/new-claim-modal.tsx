@@ -2,19 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { PLACE_OF_SERVICE_CODES } from '@grove/codes';
+import { CodeAutocomplete } from '@/components/code-autocomplete';
+import { searchDiagnosisCodes, searchProcedureCodes } from '@/lib/code-lookup';
 import { createClaimAction } from './actions';
 
 const field =
   'w-full h-8 rounded-md border border-line-strong bg-surface px-2.5 text-xs text-ink focus:border-grove focus:outline-hidden';
 
-const POS_OPTIONS = [
-  { value: '11', label: '11 — Office' },
-  { value: '02', label: '02 — Telehealth (patient at home)' },
-  { value: '19', label: '19 — Off-campus Outpatient Hospital' },
-  { value: '21', label: '21 — Inpatient Hospital' },
-  { value: '22', label: '22 — On-campus Outpatient Hospital' },
-  { value: '23', label: '23 — Emergency Room' },
-];
+const POS_OPTIONS = PLACE_OF_SERVICE_CODES.map((p) => ({ value: p.code, label: `${p.code} — ${p.name}` }));
 
 interface Line {
   procedureCode: string;
@@ -165,9 +161,18 @@ export function NewClaimModal({
                 <h4 className="mb-2 text-xs font-semibold text-ink">Diagnoses (ICD-10)</h4>
                 <div className="space-y-2">
                   {diagnosisCodes.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    <div key={i} className="flex items-start gap-2">
                       <span className="w-5 text-right text-[11px] text-ink-4">{i + 1}.</span>
-                      <input value={d} onChange={(e) => setDx(i, e.target.value)} placeholder="e.g. Z00.00" className={`${field} font-mono`} required={i === 0} />
+                      <div className="flex-1">
+                        <CodeAutocomplete
+                          value={d}
+                          onChange={(v) => setDx(i, v)}
+                          search={searchDiagnosisCodes}
+                          placeholder="e.g. Z0000"
+                          className={`${field} font-mono`}
+                          required={i === 0}
+                        />
+                      </div>
                       {diagnosisCodes.length > 1 && (
                         <button type="button" onClick={() => removeDx(i)} className="text-xs text-danger hover:underline">Remove</button>
                       )}
@@ -195,8 +200,15 @@ export function NewClaimModal({
                     <tbody className="divide-y divide-line">
                       {lines.map((l, i) => (
                         <tr key={i}>
-                          <td className="py-1.5 pr-2">
-                            <input value={l.procedureCode} onChange={(e) => setLine(i, 'procedureCode', e.target.value)} placeholder="99213" required className={`${field} font-mono`} />
+                          <td className="py-1.5 pr-2 align-top">
+                            <CodeAutocomplete
+                              value={l.procedureCode}
+                              onChange={(v) => setLine(i, 'procedureCode', v)}
+                              search={searchProcedureCodes}
+                              placeholder="99213"
+                              required
+                              className={`${field} font-mono`}
+                            />
                           </td>
                           <td className="py-1.5 pr-2">
                             <input value={l.modifiers} onChange={(e) => setLine(i, 'modifiers', e.target.value)} placeholder="25, 59" className={`${field} font-mono`} />
