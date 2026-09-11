@@ -27,3 +27,6 @@ Thumbs.db
 desktop.ini
 playwright-report/
 test-results/
+
+.vercel
+.env*

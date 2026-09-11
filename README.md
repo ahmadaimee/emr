@@ -1,8 +1,8 @@
-# Grove
+# PracticeOS
 
 Multi-tenant practice management and revenue cycle platform.
 
-Grove is built for a billing company running RCM across many client practices. The
+PracticeOS is built for a billing company running RCM across many client practices. The
 organising principle is that **the revenue cycle should run itself, and pull in a human
 only for exceptions**.
 
@@ -53,7 +53,7 @@ packages/forms          CMS-1500 and UB-04 renderers
 packages/codes          ICD-10, CPT/HCPCS, NCCI, MUE, POS, taxonomy
 packages/reporting      Semantic layer for the report builder
 packages/audit          Hash-chained audit and activity events
-packages/ui             Grove design system
+packages/ui             PracticeOS design system
 packages/sdk            Generated TypeScript API client
 ```
 

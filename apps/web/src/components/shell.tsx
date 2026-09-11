@@ -11,7 +11,7 @@ export function Shell({ children, user, org, openTasks }: { children: ReactNode;
         <div className="flex h-14 items-center gap-2 px-4">
           <Logo />
           <div className="leading-tight">
-            <div className="font-display text-[15px] font-semibold tracking-tight">Grove</div>
+            <div className="font-display text-[15px] font-semibold tracking-tight">PracticeOS</div>
             <div className="truncate text-[11px] text-ink-3">{org.name}</div>
           </div>
         </div>

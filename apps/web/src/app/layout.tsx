@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist_Mono, Instrument_Sans, Inter } from 'next/font/google';
+import Script from 'next/script';
 import type { ReactNode } from 'react';
 import './globals.css';
 
@@ -8,7 +9,7 @@ const instrument = Instrument_Sans({ subsets: ['latin'], variable: '--font-instr
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: { default: 'Grove', template: '%s · Grove' },
+  title: { default: 'PracticeOS', template: '%s · PracticeOS' },
   description: 'Practice management and revenue cycle',
   robots: { index: false, follow: false },
 };
@@ -17,7 +18,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${instrument.variable} ${geistMono.variable}`} data-density="compact" suppressHydrationWarning>
       <head>
-        <script
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var effective=t==='dark'||(t!=='light'&&d)?'dark':'light';document.documentElement.setAttribute('data-theme',effective);document.documentElement.classList.toggle('dark',effective==='dark');document.documentElement.classList.toggle('light',effective==='light');}catch(e){}})();`,
           }}

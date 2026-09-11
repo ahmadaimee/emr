@@ -31,6 +31,7 @@ const DEFAULT_NAV: NavItem[] = [
     children: [
       { href: '/payments', label: 'All Payments' },
       { href: '/remittances', label: 'Remittances' },
+      { href: '/statements', label: 'Patient Statements' },
     ],
   },
   { href: '/authorizations', label: 'Auth & Referrals', key: 'A' },
@@ -51,7 +52,9 @@ const DEFAULT_NAV: NavItem[] = [
 ];
 
 const SETTINGS = [
+  { href: '/settings/setup', label: 'Practice Setup' },
   { href: '/settings/automation', label: 'Automation' },
+  { href: '/settings/claim-statuses', label: 'Claim Statuses' },
   { href: '/settings/rules', label: 'Rules & Denial Engine' },
   { href: '/settings/fee-schedules', label: 'Fee Schedules & Coding' },
   { href: '/settings/providers', label: 'Providers' },
