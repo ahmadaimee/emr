@@ -4,6 +4,7 @@ import { Empty, Kpi, Money, PageHeader, StatusPill, selectCls } from '@/componen
 import { STATUS_LABEL, date } from '@/lib/format';
 import { pageContext } from '@/lib/session';
 import { BulkSubmit } from './bulk-submit';
+import { NewClaimModal } from './new-claim-modal';
 
 export const metadata = { title: 'Claims' };
 
@@ -13,7 +14,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const { run } = await pageContext();
 
-  const { rows, counts, practices } = await run('/claims', async (ctx, phi) => {
+  const { rows, counts, practices, newClaimPatients, newClaimProviders } = await run('/claims', async (ctx, phi) => {
     const conds = [
       sp.status ? eq(schema.claims.status, sp.status as typeof schema.claims.$inferSelect.status) : undefined,
       sp.practice ? eq(schema.claims.practiceId, sp.practice) : undefined,
@@ -31,13 +32,32 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
     phi.touch(rows.map((r) => r.c.patientId), ['demographics', 'financial'], rows.length);
     const counts = await ctx.tx.select({ status: schema.claims.status, n: sql<number>`count(*)::int` }).from(schema.claims).groupBy(schema.claims.status);
     const practices = await ctx.tx.select({ id: schema.practices.id, name: schema.practices.name }).from(schema.practices).orderBy(schema.practices.name);
-    return { rows, counts, practices };
+
+    const patients = await ctx.tx.select({ id: schema.patients.id, first: schema.patients.firstName, last: schema.patients.lastName, mrn: schema.patients.mrn }).from(schema.patients).orderBy(schema.patients.lastName).limit(300);
+    const providers = await ctx.tx.select({ id: schema.providers.id, first: schema.providers.firstName, last: schema.providers.lastName, credentials: schema.providers.credentials, npi: schema.providers.npi }).from(schema.providers).orderBy(schema.providers.lastName).limit(200);
+
+    return {
+      rows,
+      counts,
+      practices,
+      newClaimPatients: patients.map((p) => ({ id: p.id, name: `${p.last}, ${p.first} (MRN ${p.mrn})` })),
+      newClaimProviders: providers.map((p) => ({ id: p.id, name: `${p.last}, ${p.first}${p.credentials ? `, ${p.credentials}` : ''} — NPI ${p.npi}` })),
+    };
   });
   const countOf = (s: string) => counts.find((c) => c.status === s)?.n ?? 0;
 
   return (
     <>
-      <PageHeader title="Claims" subtitle={`${rows.length}${rows.length === 200 ? '+' : ''} shown`} actions={<BulkSubmit />} />
+      <PageHeader
+        title="Claims"
+        subtitle={`${rows.length}${rows.length === 200 ? '+' : ''} shown`}
+        actions={
+          <div className="flex items-center gap-2">
+            <NewClaimModal patients={newClaimPatients ?? []} providers={newClaimProviders ?? []} />
+            <BulkSubmit />
+          </div>
+        }
+      />
 
       {/* Top Claim KPIs */}
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">

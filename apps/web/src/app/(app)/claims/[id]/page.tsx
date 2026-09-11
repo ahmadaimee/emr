@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { and, desc, eq, schema } from '@grove/db';
+import { and, desc, eq, inArray, schema } from '@grove/db';
 import { loadClaimAssembly } from '@grove/domain';
 import { pageContext } from '@/lib/session';
 import { getMockClaimDetail } from '@/lib/mock-data';
@@ -77,10 +77,94 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
       .orderBy(desc(schema.auditEvents.occurredAt))
       .limit(20);
 
+    const customStatuses = await ctx.tx
+      .select({ id: schema.claimCustomStatuses.id, label: schema.claimCustomStatuses.label, color: schema.claimCustomStatuses.color })
+      .from(schema.claimCustomStatuses)
+      .where(and(eq(schema.claimCustomStatuses.orgId, ctx.tenant.orgId), eq(schema.claimCustomStatuses.active, true)))
+      .orderBy(schema.claimCustomStatuses.sortOrder);
+
+    // Follow-up: the work-queue task carrying this claim, if any human work has been
+    // filed against it (by automation or manually).
+    const [taskRow] = await ctx.tx
+      .select({ t: schema.tasks, queueName: schema.workQueues.name })
+      .from(schema.tasks)
+      .leftJoin(schema.workQueues, eq(schema.workQueues.id, schema.tasks.workQueueId))
+      .where(and(eq(schema.tasks.orgId, ctx.tenant.orgId), eq(schema.tasks.subjectType, 'claim'), eq(schema.tasks.subjectId, id)))
+      .orderBy(desc(schema.tasks.createdAt))
+      .limit(1);
+    const assignee = taskRow?.t.assignedTo
+      ? (await ctx.tx.select({ firstName: schema.users.firstName, lastName: schema.users.lastName }).from(schema.users).where(eq(schema.users.id, taskRow.t.assignedTo)))[0]
+      : null;
+    const followUpTask = taskRow
+      ? { ...taskRow.t, queueName: taskRow.queueName, assigneeName: assignee ? `${assignee.firstName} ${assignee.lastName}` : null }
+      : null;
+
+    const orgUsers = await ctx.tx
+      .select({ id: schema.users.id, firstName: schema.users.firstName, lastName: schema.users.lastName })
+      .from(schema.users)
+      .where(and(eq(schema.users.orgId, ctx.tenant.orgId), eq(schema.users.status, 'active')))
+      .orderBy(schema.users.firstName);
+
+    const workQueues = await ctx.tx
+      .select({ key: schema.workQueues.key, name: schema.workQueues.name })
+      .from(schema.workQueues)
+      .where(and(eq(schema.workQueues.orgId, ctx.tenant.orgId), eq(schema.workQueues.active, true)))
+      .orderBy(schema.workQueues.name);
+
+    // Insurance eligibility: the most recent 270/271 check on file for this claim's coverage.
+    const [eligibilityCheck] = await ctx.tx
+      .select()
+      .from(schema.eligibilityChecks)
+      .where(eq(schema.eligibilityChecks.coverageId, a.coverage.id))
+      .orderBy(desc(schema.eligibilityChecks.createdAt))
+      .limit(1);
+
+    // Every coverage on file for this patient, primary through tertiary — not just the
+    // one this claim bills — so the operator can see the full COB picture at a glance.
+    const patientCoverages = await ctx.tx
+      .select({ c: schema.coverages, payerName: schema.payers.name })
+      .from(schema.coverages)
+      .innerJoin(schema.payers, eq(schema.payers.id, schema.coverages.payerId))
+      .where(eq(schema.coverages.patientId, a.patient.id))
+      .orderBy(schema.coverages.rank);
+
+    const activeProviders = await ctx.tx
+      .select({ id: schema.providers.id, firstName: schema.providers.firstName, lastName: schema.providers.lastName, npi: schema.providers.npi })
+      .from(schema.providers)
+      .where(and(eq(schema.providers.practiceId, a.practice.id), eq(schema.providers.active, true)))
+      .orderBy(schema.providers.lastName);
+
+    // The billing provider isn't part of the standard claim assembly (only rendering,
+    // referring, and supervising are), so it's resolved separately here.
+    const [billingProvider] = a.encounter.billingProviderId
+      ? await ctx.tx.select().from(schema.providers).where(eq(schema.providers.id, a.encounter.billingProviderId))
+      : [];
+
+    // A provider assigned to this claim may since have been deactivated — still show
+    // them in the picker (and by name) rather than silently blanking the field out.
+    const assignedProviderIds = [a.encounter.renderingProviderId, a.encounter.billingProviderId, a.encounter.supervisingProviderId, a.encounter.referringProviderId].filter(
+      (pid): pid is string => Boolean(pid) && !activeProviders.some((p) => p.id === pid),
+    );
+    const inactiveAssignedProviders = assignedProviderIds.length
+      ? await ctx.tx
+          .select({ id: schema.providers.id, firstName: schema.providers.firstName, lastName: schema.providers.lastName, npi: schema.providers.npi })
+          .from(schema.providers)
+          .where(inArray(schema.providers.id, assignedProviderIds))
+      : [];
+    const practiceProviders = [...activeProviders, ...inactiveAssignedProviders].sort((x, y) => x.lastName.localeCompare(y.lastName));
+
+    const providerNames = {
+      renderingProviderId: a.renderingProvider ? `${a.renderingProvider.lastName}, ${a.renderingProvider.firstName}` : null,
+      billingProviderId: billingProvider ? `${billingProvider.lastName}, ${billingProvider.firstName}` : null,
+      supervisingProviderId: a.supervisingProvider ? `${a.supervisingProvider.lastName}, ${a.supervisingProvider.firstName}` : null,
+      referringProviderId: a.referringProvider ? `${a.referringProvider.lastName}, ${a.referringProvider.firstName}` : null,
+    };
+
     const mockDetail = getMockClaimDetail(id);
 
     return {
       a,
+      customStatuses,
       findings,
       versions,
       submissions,
@@ -90,6 +174,13 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
       denials,
       activity,
       ledger,
+      followUpTask,
+      orgUsers,
+      workQueues,
+      eligibilityCheck: eligibilityCheck ?? null,
+      patientCoverages,
+      practiceProviders,
+      providerNames,
       notes: mockDetail.notes,
       patientAlert: mockDetail.patientAlert,
       insuranceAlert: mockDetail.insuranceAlert,

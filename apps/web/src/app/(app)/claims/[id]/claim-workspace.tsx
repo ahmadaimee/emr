@@ -9,6 +9,18 @@ import { EditFilingModal } from './edit-filing-modal';
 import { PatientAlertModal } from './patient-alert-modal';
 import { ClaimNotesCard } from './claim-notes-card';
 import { ClaimLogsHub } from './claim-logs-hub';
+import { CustomStatusPicker } from './custom-status-picker';
+import { ClaimFollowUpPanel } from './claim-follow-up-panel';
+import { ClaimEligibilityWidget } from './claim-eligibility-widget';
+import { ClaimInsurancesCard } from './claim-insurances-card';
+import { ClaimProvidersCard } from './claim-providers-card';
+import { ClaimDiagnosesEditor } from './claim-diagnoses-editor';
+import { ClaimServiceLinesTable } from './claim-service-lines-table';
+import { ClaimHeaderModal } from './claim-header-modal';
+import { ClaimDataModal } from './claim-data-modal';
+import { ClaimOptionMenu } from './claim-option-menu';
+
+const EDITABLE_STATUSES = new Set(['draft', 'needs_review', 'ready', 'rejected', 'secondary_ready']);
 
 interface ClaimWorkspaceProps {
   claimId: string;
@@ -38,7 +50,16 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
     auditLogs = [],
     submissionLogs = [],
     changesLogs = [],
+    activityLogs = [],
     rejectionLogs = [],
+    customStatuses = [],
+    followUpTask = null,
+    orgUsers = [],
+    workQueues = [],
+    eligibilityCheck = null,
+    patientCoverages = [],
+    practiceProviders = [],
+    providerNames = {},
   } = data;
 
   const c = a.claim || {};
@@ -47,7 +68,10 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
   const pyr = a.payer || {};
   const prc = a.practice || {};
   const doc = a.renderingProvider || {};
+  const enc = a.encounter || {};
   const lines = a.lines || [];
+  const diagnosisCodes = enc.diagnosisCodes?.length ? enc.diagnosisCodes : c.diagnosisCodes || ['M54.5', 'M25.561'];
+  const isEditable = EDITABLE_STATUSES.has(c.status);
 
   const errors = findings.filter((f: any) => f.severity === 'error').length;
   const warnings = findings.filter((f: any) => f.severity === 'warning').length;
@@ -82,6 +106,7 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
                   {p.lastName}, {p.firstName}
                 </h1>
                 <StatusPill status={c.status} />
+                <CustomStatusPicker claimId={claimId} currentId={c.customStatusId ?? null} options={customStatuses} />
                 <span className="font-mono text-xs text-ink-3 bg-surface-sunken px-1.5 py-0.5 rounded border border-line">
                   Claim #{c.claimNumber || 'CLM-2026-0101'}
                 </span>
@@ -117,6 +142,33 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
               currentPriorAuth={c.priorAuthNumber || ''}
             />
 
+            {isEditable && <ClaimHeaderModal claimId={claimId} currentDelayReasonCode={c.delayReasonCode ?? null} />}
+
+            {isEditable && (
+              <ClaimDataModal
+                claimId={claimId}
+                current={{
+                  relatedToEmployment: !!enc.relatedToEmployment,
+                  relatedToAutoAccident: !!enc.relatedToAutoAccident,
+                  relatedToOtherAccident: !!enc.relatedToOtherAccident,
+                  outsideLabPerformed: !!enc.outsideLabPerformed,
+                  accidentState: enc.accidentState ?? null,
+                  accidentDate: enc.accidentDate ?? null,
+                  onsetDate: enc.onsetDate ?? null,
+                  initialTreatmentDate: enc.initialTreatmentDate ?? null,
+                  lastSeenDate: enc.lastSeenDate ?? null,
+                  hospitalizedFrom: enc.hospitalizedFrom ?? null,
+                  hospitalizedTo: enc.hospitalizedTo ?? null,
+                  disabilityFrom: enc.disabilityFrom ?? null,
+                  disabilityTo: enc.disabilityTo ?? null,
+                  outsideLabChargesCents: enc.outsideLabChargesCents ?? null,
+                  additionalClaimInfo: enc.additionalClaimInfo ?? null,
+                }}
+              />
+            )}
+
+            <ClaimOptionMenu claimId={claimId} />
+
             <button
               type="button"
               disabled={isPending}
@@ -128,7 +180,6 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
               }
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-3 text-xs font-medium text-ink hover:bg-surface-sunken transition-colors"
             >
-              <span>🔍</span>
               <span>Re-Scrub</span>
             </button>
 
@@ -148,7 +199,6 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
                   : 'bg-neutral-400 cursor-not-allowed opacity-60'
               }`}
             >
-              <span>📤</span>
               <span>
                 {isPending
                   ? 'Submitting...'
@@ -164,7 +214,6 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
               href={`/claims/${claimId}/${(c.claimType || '837P') === '837I' ? 'ub04' : 'hcfa'}`}
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 px-3 text-xs font-semibold text-red-700 dark:text-red-300 transition-colors"
             >
-              <span>🖨️</span>
               <span>{(c.claimType || '837P') === '837I' ? 'UB-04 Form' : 'HCFA-1500 Form'}</span>
             </Link>
 
@@ -175,7 +224,6 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
               rel="noopener noreferrer"
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-2.5 text-xs font-medium text-ink hover:bg-surface-sunken"
             >
-              <span>📄</span>
               <span>PDF</span>
             </a>
 
@@ -224,16 +272,19 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
         </div>
       </div>
 
-      {/* 3. ACTIVE ALERTS SECTION (Payer Alerts & Claim Specific Alerts) */}
+      {/* 3. MAIN CONTENT + FOLLOW-UP DOCK */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4 items-start">
+      <div className="space-y-4 min-w-0">
+
+      {/* Active Alerts (Payer Alerts & Claim Specific Alerts) */}
       <div className="space-y-2">
         {/* Claim Specific Alert */}
         {claimAlert && (
-          <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 flex items-start justify-between gap-3 text-xs">
+          <div className="rounded-lg border border-danger/40 bg-danger-soft p-3 flex items-start justify-between gap-3 text-xs">
             <div className="flex items-start gap-2.5">
-              <span className="text-base text-red-600 shrink-0">🚨</span>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-red-800 dark:text-red-200 text-xs uppercase">
+                  <span className="font-bold text-danger text-xs uppercase">
                     Claim-Specific Alert
                   </span>
                   <span className="text-[10px] text-ink-4">
@@ -250,11 +301,10 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
 
         {/* Insurance / Payer Alert */}
         {insuranceAlert && (
-          <div className="rounded-lg border border-blue-500/40 bg-blue-500/10 p-3 flex items-start justify-between gap-3 text-xs">
+          <div className="rounded-lg border border-info/40 bg-info-soft p-3 flex items-start justify-between gap-3 text-xs">
             <div className="flex items-start gap-2.5">
-              <span className="text-base text-blue-600 shrink-0">ℹ️</span>
               <div>
-                <span className="font-bold text-blue-800 dark:text-blue-200 text-xs uppercase">
+                <span className="font-bold text-info text-xs uppercase">
                   Insurance Guideline Alert ({insuranceAlert.payerName})
                 </span>
                 <p className="text-xs text-ink-2 mt-0.5 font-medium">
@@ -277,7 +327,6 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
               : 'bg-surface-raised border border-line text-ink-2 hover:bg-surface-sunken'
           }`}
         >
-          <span>📋</span>
           <span>Service Lines &amp; Coding</span>
           <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${activeTab === 'services' ? 'bg-white/20 text-white' : 'bg-surface-sunken text-ink-3'}`}>
             {lines.length}
@@ -293,7 +342,6 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
               : 'bg-surface-raised border border-line text-ink-2 hover:bg-surface-sunken'
           }`}
         >
-          <span>🔍</span>
           <span>Scrub Findings</span>
           {findings.length > 0 && (
             <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono font-bold ${errors > 0 ? 'bg-danger text-white' : 'bg-warn-soft text-warn-strong'}`}>
@@ -311,7 +359,6 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
               : 'bg-surface-raised border border-line text-ink-2 hover:bg-surface-sunken'
           }`}
         >
-          <span>📝</span>
           <span>Claim &amp; Summary Notes</span>
           <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${activeTab === 'notes' ? 'bg-white/20 text-white' : 'bg-surface-sunken text-ink-3'}`}>
             {notes.length}
@@ -327,7 +374,6 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
               : 'bg-surface-raised border border-line text-ink-2 hover:bg-surface-sunken'
           }`}
         >
-          <span>📊</span>
           <span>Claim History &amp; Logs Center</span>
           <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${activeTab === 'logs' ? 'bg-white/20 text-white' : 'bg-surface-sunken text-ink-3'}`}>
             All 7 Logs
@@ -343,7 +389,6 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
               : 'bg-surface-raised border border-line text-ink-2 hover:bg-surface-sunken'
           }`}
         >
-          <span>💳</span>
           <span>Financials &amp; Remittances</span>
           <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${activeTab === 'ledger' ? 'bg-white/20 text-white' : 'bg-surface-sunken text-ink-3'}`}>
             {ledger.length}
@@ -373,97 +418,39 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
             </div>
           </div>
 
-          {/* Diagnosis Codes Box */}
-          <div className="rounded-lg border border-line bg-surface-raised p-3.5">
-            <span className="text-[10px] font-semibold uppercase text-ink-4 block mb-1.5">
-              Assigned ICD-10 Diagnoses (ICD Ind: 0)
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-              {(c.diagnosisCodes || ['M54.5', 'M25.561']).map((dx: string, idx: number) => {
-                const pointer = String.fromCharCode(65 + idx);
-                const label = dx === 'M54.5' ? 'Low back pain, unspecified' : dx === 'M25.561' ? 'Pain in right knee' : 'Clinical diagnosis';
-                return (
-                  <div key={dx} className="flex items-center gap-2 rounded border border-line bg-surface p-2">
-                    <span className="font-mono font-bold text-grove-strong bg-grove-soft px-1.5 rounded text-xs">
-                      {pointer}
-                    </span>
-                    <div>
-                      <span className="font-mono font-bold text-ink">{dx}</span>
-                      <div className="text-[11px] text-ink-3 truncate max-w-xs">{label}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {/* Providers on the Claim (Billing / Rendering / Supervising / Referring) */}
+          <ClaimProvidersCard
+            claimId={claimId}
+            providers={{
+              renderingProviderId: enc.renderingProviderId || doc.id || '',
+              billingProviderId: enc.billingProviderId ?? null,
+              supervisingProviderId: enc.supervisingProviderId ?? null,
+              referringProviderId: enc.referringProviderId ?? null,
+            }}
+            names={{
+              renderingProviderId: providerNames.renderingProviderId || (doc.firstName ? `${doc.lastName}, ${doc.firstName}` : null),
+              billingProviderId: providerNames.billingProviderId ?? null,
+              supervisingProviderId: providerNames.supervisingProviderId ?? null,
+              referringProviderId: providerNames.referringProviderId ?? null,
+            }}
+            options={practiceProviders}
+            editable={isEditable && practiceProviders.length > 0}
+          />
+
+          {/* Insurances on File */}
+          <ClaimInsurancesCard patientId={p.id || 'pat-1'} coverages={patientCoverages} />
+
+          {/* Diagnosis Codes */}
+          <ClaimDiagnosesEditor claimId={claimId} diagnosisCodes={diagnosisCodes} editable={isEditable} />
 
           {/* High-Density Service Lines Table */}
-          <div className="overflow-x-auto rounded-lg border border-line bg-surface-raised shadow-xs">
-            <table className="g-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>DOS</th>
-                  <th>CPT / HCPCS</th>
-                  <th>Description</th>
-                  <th>Mod</th>
-                  <th>Dx</th>
-                  <th>POS</th>
-                  <th className="text-right">Units</th>
-                  <th className="text-right">Charge</th>
-                  <th className="text-right">Allowed</th>
-                  <th className="text-right">Paid</th>
-                  <th className="text-right">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((l: any) => (
-                  <tr key={l.id} className="hover:bg-surface-sunken">
-                    <td className="text-ink-4">{l.lineNumber || 1}</td>
-                    <td className="text-xs text-ink whitespace-nowrap">{c.serviceDateFrom || '2026-03-01'}</td>
-                    <td>
-                      <span className="g-mono font-bold text-xs bg-surface-sunken px-1.5 py-0.5 rounded border border-line text-ink">
-                        {l.cptCode || l.procedureCode}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="text-xs text-ink truncate max-w-xs" title={l.description}>
-                        {l.description || 'Medical Evaluation & Management'}
-                      </div>
-                    </td>
-                    <td>
-                      {l.modifier1 ? (
-                        <span className="g-mono text-xs font-semibold text-grove-strong bg-grove-soft px-1 rounded">
-                          {l.modifier1}
-                        </span>
-                      ) : (
-                        <span className="text-ink-4">—</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className="g-mono text-xs font-bold text-ink-2">
-                        {(l.diagnosisPointers || [1]).map((p: any) => (typeof p === 'number' ? String.fromCharCode(64 + p) : p)).join(',')}
-                      </span>
-                    </td>
-                    <td>{l.placeOfService || '11'}</td>
-                    <td data-numeric className="text-right">{l.units || 1}</td>
-                    <td data-type="money" className="text-right font-medium text-ink">
-                      {money(l.chargeCents || 25000)}
-                    </td>
-                    <td data-type="money" className="text-right text-ink-2">
-                      {money(l.allowedCents || 21000)}
-                    </td>
-                    <td data-type="money" className="text-right text-ink-3">
-                      {money(l.paidCents || 0)}
-                    </td>
-                    <td data-type="money" className="text-right font-bold text-ink">
-                      {money(l.chargeCents || 25000)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ClaimServiceLinesTable
+            claimId={claimId}
+            lines={lines}
+            diagnosisCodes={diagnosisCodes}
+            serviceDate={c.serviceDateFrom || '2026-03-01'}
+            editable={isEditable}
+          />
         </div>
       )}
 
@@ -604,7 +591,7 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
                         </span>
                       </td>
                       <td data-type="money" className="text-right">{money(rc.totalChargeCents || 45000)}</td>
-                      <td data-type="money" className="text-right font-bold">{money(rc.paidCents || 0)}</td>
+                      <td data-type="money" className="text-right font-bold">{money(rc.totalPaidCents || 0)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -613,6 +600,21 @@ export function ClaimWorkspace({ claimId, data }: ClaimWorkspaceProps) {
           )}
         </div>
       )}
+
+      </div>
+
+      {/* Follow-up dock */}
+      <div className="space-y-4">
+        <ClaimEligibilityWidget
+          claimId={claimId}
+          payerName={pyr.name || 'Blue Cross Blue Shield'}
+          memberId={cov.memberId || 'BCBS-992812'}
+          check={eligibilityCheck}
+        />
+        <ClaimFollowUpPanel claimId={claimId} task={followUpTask} users={orgUsers} queues={workQueues} />
+      </div>
+
+      </div>
     </div>
   );
 }

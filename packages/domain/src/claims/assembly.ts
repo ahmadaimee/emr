@@ -198,7 +198,14 @@ export function assembleProfessionalClaim(a: ClaimAssembly): ProfessionalClaim {
       accident: encounter.accidentDate ?? undefined,
       hospitalizedFrom: encounter.hospitalizedFrom ?? undefined,
       hospitalizedTo: encounter.hospitalizedTo ?? undefined,
+      disabilityFrom: encounter.disabilityFrom ?? undefined,
+      disabilityTo: encounter.disabilityTo ?? undefined,
     },
+    outsideLab: encounter.outsideLabPerformed
+      ? { performed: true, chargesCents: encounter.outsideLabChargesCents ?? 0 }
+      : undefined,
+    additionalClaimInfo: encounter.additionalClaimInfo ?? undefined,
+    delayReasonCode: claim.delayReasonCode ?? undefined,
     priorAuthorizationNumber: encounter.priorAuthorizationNumber ?? undefined,
     referralNumber: encounter.referralNumber ?? undefined,
     cliaNumber: encounter.clia ?? undefined,

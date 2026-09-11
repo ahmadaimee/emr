@@ -58,7 +58,6 @@ export function ClaimActions({
         href={`/claims/${claimId}/hcfa`}
         className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-surface-raised px-3 text-xs font-medium text-ink hover:bg-surface-sunken"
       >
-        <span>🖨️</span>
         <span>HCFA-1500 Form</span>
       </a>
 

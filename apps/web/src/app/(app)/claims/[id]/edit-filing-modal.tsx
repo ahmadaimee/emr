@@ -62,7 +62,6 @@ export function EditFilingModal({
         onClick={() => setOpen(true)}
         className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-surface-raised px-3 text-xs font-medium text-ink hover:bg-surface-sunken transition-colors"
       >
-        <span>⚙️</span>
         <span>Claim Type & Filing</span>
       </button>
 

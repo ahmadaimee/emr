@@ -44,6 +44,7 @@ export function ClaimLogsHub({
       detail: l.hash ? `HMAC SHA-256: ${l.hash.slice(0, 16)}...` : undefined,
       extra: l.ipAddress ? `IP: ${l.ipAddress}` : undefined,
       verified: l.verified ?? true,
+      status: undefined as string | undefined,
     })),
     ...submissionLogs.map((s) => ({
       id: s.id,
@@ -56,6 +57,7 @@ export function ClaimLogsHub({
       date: new Date(s.submittedAt || s.sentAt || Date.now()),
       detail: `ISA ${s.isaControlNumber || '000010042'} · ST ${s.stControlNumber || '0001'} · Batch ${s.batchNumber || '837P'}`,
       extra: s.responseSummary || s.clearinghouseClaimId,
+      verified: undefined as boolean | undefined,
       status: s.status,
     })),
     ...changesLogs.map((c) => ({
@@ -69,6 +71,8 @@ export function ClaimLogsHub({
       date: new Date(c.changedAt || Date.now()),
       detail: c.reason,
       extra: c.authorRole ? `Role: ${c.authorRole}` : undefined,
+      verified: undefined as boolean | undefined,
+      status: undefined as string | undefined,
     })),
     ...activityLogs.map((a) => ({
       id: a.id,
@@ -76,11 +80,13 @@ export function ClaimLogsHub({
       typeLabel: 'Activity Event',
       badgeTone: 'gray',
       title: a.summary || a.verb || 'Claim transition',
-      actor: a.actorLabel || (a.actorType === 'system' ? 'Grove Autopilot' : 'User'),
+      actor: a.actorLabel || (a.actorType === 'system' ? 'PracticeOS Autopilot' : 'User'),
       actorType: a.actorType,
       date: new Date(a.occurredAt || Date.now()),
       detail: a.summary,
       extra: undefined,
+      verified: undefined as boolean | undefined,
+      status: undefined as string | undefined,
     })),
     ...errorLogs.map((e) => ({
       id: e.id,
@@ -93,6 +99,8 @@ export function ClaimLogsHub({
       date: new Date(e.createdAt || Date.now()),
       detail: e.suggestedFix?.explanation || 'Validation warning/error',
       extra: e.severity?.toUpperCase(),
+      verified: undefined as boolean | undefined,
+      status: undefined as string | undefined,
     })),
     ...rejectionLogs.map((r) => ({
       id: r.id,
@@ -105,6 +113,8 @@ export function ClaimLogsHub({
       date: new Date(r.receivedAt || Date.now()),
       detail: r.suggestedResolution,
       extra: r.clearinghouseTrace,
+      verified: undefined as boolean | undefined,
+      status: undefined as string | undefined,
     })),
     ...denialLogs.map((d) => ({
       id: d.id,
@@ -117,6 +127,8 @@ export function ClaimLogsHub({
       date: new Date(d.createdAt || Date.now()),
       detail: d.remarkCodes ? `RARC: ${d.remarkCodes.join(', ')} · Suggested: ${d.suggestedAction}` : undefined,
       extra: d.deniedAmountCents ? `$${(d.deniedAmountCents / 100).toFixed(2)} denied` : undefined,
+      verified: undefined as boolean | undefined,
+      status: undefined as string | undefined,
     })),
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
@@ -139,7 +151,6 @@ export function ClaimLogsHub({
       {/* Header & Sub-Tabs */}
       <div className="border-b border-line p-3 sm:px-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-base">📊</span>
           <h3 className="text-sm font-bold text-ink">Claim History &amp; Logs Center</h3>
           <span className="rounded-full bg-surface-sunken border border-line px-2 py-0.2 text-[10px] font-mono text-ink-3">
             {unifiedStream.length} total events
@@ -153,9 +164,8 @@ export function ClaimLogsHub({
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
             placeholder="Search logs by keyword, actor, code..."
-            className="h-7 w-56 rounded-md border border-line-strong bg-surface pl-7 pr-2 text-xs text-ink placeholder:text-ink-4 focus:border-grove"
+            className="h-7 w-56 rounded-md border border-line-strong bg-surface pl-2 pr-2 text-xs text-ink placeholder:text-ink-4 focus:border-grove"
           />
-          <span className="absolute left-2 top-1.5 text-xs text-ink-4">🔍</span>
           {searchFilter && (
             <button
               onClick={() => setSearchFilter('')}
@@ -170,14 +180,14 @@ export function ClaimLogsHub({
       {/* Categories Navigation Bar */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-line bg-surface/50 px-4 py-2 text-xs overflow-x-auto">
         {[
-          { id: 'all', label: 'All Logs', count: unifiedStream.length, icon: '📋' },
-          { id: 'audit', label: 'Audit Log (HMAC)', count: auditLogs.length, icon: '🛡️' },
-          { id: 'submissions', label: 'Submissions (837)', count: submissionLogs.length, icon: '📤' },
-          { id: 'changes', label: 'Changes Log', count: changesLogs.length, icon: '🔄' },
-          { id: 'activity', label: 'Activity Log', count: activityLogs.length, icon: '⚡' },
-          { id: 'errors', label: 'Error Log', count: errorLogs.length, icon: '❌' },
-          { id: 'rejections', label: 'Rejections (277CA)', count: rejectionLogs.length, icon: '🚫' },
-          { id: 'denials', label: 'Denials (835 ERA)', count: denialLogs.length, icon: '⚠️' },
+          { id: 'all', label: 'All Logs', count: unifiedStream.length },
+          { id: 'audit', label: 'Audit Log (HMAC)', count: auditLogs.length },
+          { id: 'submissions', label: 'Submissions (837)', count: submissionLogs.length },
+          { id: 'changes', label: 'Changes Log', count: changesLogs.length },
+          { id: 'activity', label: 'Activity Log', count: activityLogs.length },
+          { id: 'errors', label: 'Error Log', count: errorLogs.length },
+          { id: 'rejections', label: 'Rejections (277CA)', count: rejectionLogs.length },
+          { id: 'denials', label: 'Denials (835 ERA)', count: denialLogs.length },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -189,7 +199,6 @@ export function ClaimLogsHub({
                 : 'bg-surface border border-line text-ink-2 hover:bg-surface-sunken hover:text-ink'
             }`}
           >
-            <span>{tab.icon}</span>
             <span>{tab.label}</span>
             <span
               className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${
@@ -220,20 +229,16 @@ export function ClaimLogsHub({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span
-                      className={`rounded px-1.5 py-0.2 text-[10px] font-mono font-semibold uppercase ${
-                        log.type === 'audit'
-                          ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300'
-                          : log.type === 'submission'
-                          ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                      className={`rounded px-1.5 py-0.2 text-[10px] font-mono font-semibold uppercase border ${
+                        log.type === 'submission'
+                          ? 'bg-info-soft text-info border-transparent'
                           : log.type === 'changes'
-                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                          ? 'bg-clay-soft text-clay border-transparent'
                           : log.type === 'errors'
-                          ? 'bg-red-500/15 text-red-700 dark:text-red-300'
-                          : log.type === 'rejections'
-                          ? 'bg-red-600/15 text-red-700 dark:text-red-400'
-                          : log.type === 'denials'
-                          ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300'
-                          : 'bg-surface-sunken text-ink-3'
+                          ? 'bg-warn-soft text-warn border-transparent'
+                          : log.type === 'rejections' || log.type === 'denials'
+                          ? 'bg-danger-soft text-danger border-transparent'
+                          : 'bg-surface-sunken text-ink-2 border-line'
                       }`}
                     >
                       {log.typeLabel}
@@ -279,7 +284,7 @@ export function ClaimLogsHub({
 
       {/* Footer Audit Guarantee */}
       <div className="border-t border-line bg-surface/30 px-4 py-2 text-[10px] text-ink-4 flex items-center justify-between">
-        <span>🔒 Tamper-evident append-only ledger and HMAC hash chained audit guarantees HIPAA Title II compliance.</span>
+        <span>Tamper-evident append-only ledger and HMAC hash chained audit guarantees HIPAA Title II compliance.</span>
         <span className="font-mono">Claim ID: {claimId}</span>
       </div>
     </div>

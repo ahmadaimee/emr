@@ -68,7 +68,6 @@ export function ClaimNotesCard({
       {/* Header with Title & Action */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line p-3 sm:px-4">
         <div className="flex items-center gap-2">
-          <span className="text-base">📝</span>
           <h3 className="text-sm font-bold text-ink">Claim Notes &amp; Summary Notes</h3>
           <span className="rounded-full bg-surface-sunken border border-line px-2 py-0.2 text-[10px] font-mono text-ink-3">
             {notes.length} note{notes.length === 1 ? '' : 's'}
@@ -202,9 +201,9 @@ export function ClaimNotesCard({
                     <span
                       className={`rounded px-1.5 py-0.2 text-[10px] font-semibold uppercase ${
                         isSummary
-                          ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                          ? 'bg-info-soft text-info'
                           : isDenial
-                          ? 'bg-red-500/15 text-red-700 dark:text-red-300'
+                          ? 'bg-danger-soft text-danger'
                           : 'bg-grove-soft text-grove-strong'
                       }`}
                     >
