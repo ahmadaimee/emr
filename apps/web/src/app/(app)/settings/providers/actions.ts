@@ -5,11 +5,24 @@ import { isValidNpi } from '@grove/rules';
 import { appendAuditEvent } from '@grove/audit';
 import { pageContext } from '@/lib/session';
 import {
+  addMockProvider,
   deleteMockProvider,
   getMockProviderReferences,
   setMockProviderStatus,
   updateMockProvider,
 } from '@/lib/mock-data';
+
+export interface NewProviderInput {
+  firstName: string;
+  lastName: string;
+  credentials: string;
+  npi: string;
+  taxonomyCode: string;
+  taxonomyDescription: string;
+  licenseNumber: string;
+  billingRole: string;
+  practiceNames: string[];
+}
 
 export interface ProviderPatch {
   firstName: string;
@@ -32,7 +45,7 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 
 async function audit(
   route: string,
-  action: 'update' | 'delete',
+  action: 'create' | 'update' | 'delete',
   resourceId: string,
   context: Record<string, unknown>,
 ) {
@@ -49,6 +62,46 @@ async function audit(
       context,
     });
   });
+}
+
+export async function createProviderAction(input: NewProviderInput): Promise<ActionResult & { id?: string }> {
+  const firstName = input.firstName.trim();
+  const lastName = input.lastName.trim();
+  if (!firstName || !lastName) return { ok: false, error: 'First and last name are required.' };
+
+  // The NPI carries a check digit (Luhn over the 80840-prefixed identifier). Rejecting a
+  // malformed one here is far cheaper than a payer rejecting every claim that quotes it.
+  const npi = input.npi.trim();
+  if (!isValidNpi(npi)) {
+    return { ok: false, error: `${npi || 'NPI'} is not a valid NPI — the check digit does not match.` };
+  }
+
+  const id = `prv-${Date.now().toString(36)}`;
+  addMockProvider({
+    id,
+    firstName,
+    lastName,
+    credentials: input.credentials.trim(),
+    npi,
+    taxonomyCode: input.taxonomyCode.trim(),
+    taxonomyDescription: input.taxonomyDescription.trim(),
+    licenseNumber: input.licenseNumber.trim(),
+    licenseState: '',
+    deaNumber: '',
+    email: '',
+    phone: '',
+    status: 'active',
+    billingRole: input.billingRole,
+    practiceIds: [],
+    practiceNames: input.practiceNames,
+    acceptingNewPatients: true,
+  });
+
+  await audit('/settings/providers', 'create', id, { npi, billingRole: input.billingRole });
+
+  revalidatePath('/settings/providers');
+  revalidatePath('/schedule');
+  return { ok: true, id };
 }
 
 export async function updateProviderAction(id: string, patch: ProviderPatch): Promise<ActionResult> {

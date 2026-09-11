@@ -1,197 +1,128 @@
 import Link from 'next/link';
+import { schema, sql } from '@grove/db';
 import { Card, Kpi, PageHeader } from '@/components/ui';
 import { pageContext } from '@/lib/session';
+import { EdiForm } from './edi-form';
 
 export const metadata = { title: 'Billing & EDI Clearinghouse Setup' };
 
 export default async function EdiSettingsPage() {
   const { run } = await pageContext();
 
-  const data = await run('/settings/edi', async () => {
-    return {
-      edi: {
-        clearinghouse: 'stedi_rest',
-        clearinghouseName: 'Stedi Healthcare Cloud API (Active)',
-        submitterId: 'GRV_SUB_99214',
-        receiverId: 'STEDI_REC_001',
-        isaQualifier: 'ZZ',
-        isaSenderId: 'GROVEHEALTH    ',
-        isaReceiverId: 'STEDICLEARING  ',
-        gsSenderId: 'GROVEHEALTH',
-        gsReceiverId: 'STEDICLEARING',
-        defaultBillingPracticeId: 'prac-1',
-        defaultRenderingProviderId: 'prv-1',
-        autoAttachOriginalIcnOnResubmit: true,
-        autoConvertFrequency7Replacement: true,
-        autoPostEraRemittances: true,
-        autoCheckEligibilityOnBooking: true,
-        productionMode: false,
-        lastPingAt: new Date(Date.now() - 1000 * 60 * 2),
-      },
-      practices: [],
-      providers: [],
-    };
+  const data = await run('/settings/edi', async (ctx) => {
+    const [org] = await ctx.tx.select().from(schema.organizations).where(sql`id = ${ctx.tenant.orgId}`);
+    const [automation] = await ctx.tx.select().from(schema.automationSettings).where(sql`org_id = ${ctx.tenant.orgId} and practice_id is null`);
+    return { org, automation };
   });
 
-  const { edi, practices = [], providers = [] } = data;
+  const org = data?.org;
+  const automation = data?.automation;
+
+  const connector = process.env.CLEARINGHOUSE_PROVIDER ?? 'mock';
+  const hasStediKey = Boolean(process.env.STEDI_API_KEY);
+  const hasWebhookSecret = Boolean(process.env.STEDI_WEBHOOK_SECRET);
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://api.<your-domain>';
 
   return (
     <>
       <PageHeader
         title="EDI Clearinghouse & Billing Setup"
-        subtitle="Configure ANSI ASC X12 5010 transmission headers, interchange delimiters, and autonomous claim correction policies."
+        subtitle="ANSI ASC X12 5010 submitter identity, connector status, and real-time delivery. See Clearinghouse Setup in the engineering vault for how to go live."
       />
 
       {/* Top EDI KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
         <Kpi
           variant="primary"
-          label="Active Clearinghouse"
-          value="Stedi Cloud REST"
-          hint="Direct REST connection"
+          label="Active Connector"
+          value={connector === 'mock' ? 'Mock (offline)' : connector === 'stedi' ? 'Stedi Cloud API' : connector}
+          hint={connector === 'mock' ? 'No live transmission — set CLEARINGHOUSE_PROVIDER' : 'Direct REST connection'}
           badge="EDI"
+          tone={connector === 'mock' ? 'warn' : 'ok'}
         />
         <Kpi
           variant="secondary"
-          label="Submitter ISA ID"
-          value={edi.isaSenderId.trim()}
-          hint={`ISA05/06: ${edi.isaQualifier}/${edi.isaSenderId.trim()}`}
-          tone="ok"
+          label="API Credential"
+          value={connector === 'stedi' ? (hasStediKey ? 'Configured' : 'Missing') : '—'}
+          tone={connector !== 'stedi' ? undefined : hasStediKey ? 'ok' : 'danger'}
         />
         <Kpi
           variant="secondary"
-          label="Autonomous Correction"
-          value="Enabled"
-          hint="Type 7 replacement + ICN"
-          tone="ok"
+          label="Real-Time Webhook"
+          value={hasWebhookSecret ? 'Configured' : 'Polling only'}
+          hint={hasWebhookSecret ? 'Accelerates 835/277CA pickup' : 'Set STEDI_WEBHOOK_SECRET'}
+          tone={hasWebhookSecret ? 'ok' : 'warn'}
         />
         <Kpi
           variant="secondary"
-          label="Connection Health"
-          value="24ms · 100%"
-          hint="Clearinghouse heartbeat"
-          tone="ok"
+          label="Usage Indicator"
+          value={org?.ediUsageIndicator === 'P' ? 'Production' : 'Test'}
+          hint="ISA15 — governs every outbound envelope"
+          tone={org?.ediUsageIndicator === 'P' ? 'ok' : 'warn'}
         />
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Interchange Envelope Configuration */}
-        <Card title="ANSI ASC X12 Interchange Envelope (ISA / GS)">
-          <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-ink-4 block font-medium mb-1">Clearinghouse Connector</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={edi.clearinghouseName}
-                  className="w-full h-8 rounded border border-line bg-surface-sunken px-2 text-ink font-semibold"
-                />
-              </div>
-              <div>
-                <label className="text-ink-4 block font-medium mb-1">Interchange Qualifier (ISA05)</label>
-                <input
-                  type="text"
-                  readOnly
-                  value="ZZ (Mutually Defined)"
-                  className="w-full h-8 rounded border border-line bg-surface-sunken px-2 text-ink font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-ink-4 block font-medium mb-1">Interchange Sender ID (ISA06)</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={edi.isaSenderId}
-                  className="w-full h-8 rounded border border-line bg-surface-sunken px-2 font-mono text-ink"
-                />
-              </div>
-              <div>
-                <label className="text-ink-4 block font-medium mb-1">Interchange Receiver ID (ISA08)</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={edi.isaReceiverId}
-                  className="w-full h-8 rounded border border-line bg-surface-sunken px-2 font-mono text-ink"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-ink-4 block font-medium mb-1">Application Sender Code (GS02)</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={edi.gsSenderId}
-                  className="w-full h-8 rounded border border-line bg-surface-sunken px-2 font-mono text-ink"
-                />
-              </div>
-              <div>
-                <label className="text-ink-4 block font-medium mb-1">Application Receiver Code (GS03)</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={edi.gsReceiverId}
-                  className="w-full h-8 rounded border border-line bg-surface-sunken px-2 font-mono text-ink"
-                />
-              </div>
-            </div>
-
-            <div className="rounded-md bg-surface-sunken p-3 text-[11px] text-ink-3">
-              <span className="font-semibold text-ink">Supported EDI Transactions:</span> 837P (Professional Claims), 835 (Remittance Advice), 270/271 (Eligibility & Benefit), 276/277 (Claim Status Inquiries), 999 (Implementation Acknowledgment).
-            </div>
+        <Card title="ANSI ASC X12 Submitter Identity (ISA / GS)">
+          {org ? (
+            <EdiForm org={{ ediSubmitterId: org.ediSubmitterId ?? '', ediSubmitterName: org.ediSubmitterName ?? '', ediUsageIndicator: (org.ediUsageIndicator as 'T' | 'P') ?? 'T' }} />
+          ) : (
+            <p className="text-xs text-ink-3">No organization record found for this session.</p>
+          )}
+          <div className="mt-4 rounded-md bg-surface-sunken p-3 text-[11px] text-ink-3">
+            <span className="font-semibold text-ink">Supported EDI Transactions:</span> 837P/837I (claims), 835 (remittance),
+            270/271 (eligibility), 276/277 (claim status), 277CA (claim acknowledgement), 278 (prior authorization), 999
+            (functional acknowledgement).
           </div>
         </Card>
 
-        {/* Autonomous Autopilot & Denial Rules Policies */}
-        <Card title="Autonomous RCM & Denial Submission Policies">
-          <div className="space-y-4 text-xs">
-            <div className="flex items-start justify-between gap-3 border-b border-line pb-3">
-              <div>
-                <div className="font-semibold text-ink">Auto-Attach Original ICN Number (Loop 2300 REF*F8)</div>
-                <div className="text-ink-3 text-[11px]">
-                  When a denial or appeal is corrected, automatically pull the original Payer Claim Control Number (ICN/CCN) from the 835 remittance and inject it into Box 22.
-                </div>
+        <Card title="Real-Time Delivery">
+          <div className="space-y-3 text-xs text-ink-2">
+            <p>
+              Today's default is polling: eligibility and remittance jobs run on a schedule, and a rejected/accepted claim
+              is picked up by a retrying background job. Configuring a webhook accelerates that — the clearinghouse tells
+              Grove the moment a 999, 277CA, or 835 is ready, instead of waiting for the next scheduled check.
+            </p>
+            <div className="rounded-md border border-line bg-surface-sunken p-3">
+              <div className="mb-1 font-semibold text-ink">Webhook endpoint to configure in Stedi</div>
+              <code className="block break-all rounded bg-surface px-2 py-1 font-mono text-[11px] text-ink-2">{apiBase}/v1/webhooks/stedi</code>
+              <div className="mt-2 text-[11px] text-ink-3">
+                Set the event destination's credential to an API Key sending <code>Authorization: Bearer &lt;secret&gt;</code>,
+                and set that same secret as <code>STEDI_WEBHOOK_SECRET</code> in this deployment's environment.
               </div>
-              <span className="rounded bg-ok-soft px-2 py-0.5 font-bold text-ok text-[11px]">Active</span>
             </div>
+            <p className={hasWebhookSecret ? 'text-ok' : 'text-warn'}>
+              {hasWebhookSecret ? '✓ A webhook secret is configured — real-time delivery is active.' : '○ No webhook secret configured — running on polling only, which still works, just slower.'}
+            </p>
+          </div>
+        </Card>
+      </div>
 
-            <div className="flex items-start justify-between gap-3 border-b border-line pb-3">
-              <div>
-                <div className="font-semibold text-ink">Auto-Convert to Frequency Code 7 (Replacement Claim)</div>
-                <div className="text-ink-3 text-[11px]">
-                  Automatically sets CLM05-3 to &apos;7&apos; on resubmissions so payers process as a corrected claim rather than rejecting as a duplicate (CO-18).
-                </div>
-              </div>
-              <span className="rounded bg-ok-soft px-2 py-0.5 font-bold text-ok text-[11px]">Active</span>
-            </div>
-
-            <div className="flex items-start justify-between gap-3 border-b border-line pb-3">
-              <div>
-                <div className="font-semibold text-ink">Auto-Post Balanced 835 Electronic Remittances</div>
-                <div className="text-ink-3 text-[11px]">
-                  Automatically reconcile matching claim payments and ledger entries when variance is $0.00.
-                </div>
-              </div>
-              <span className="rounded bg-ok-soft px-2 py-0.5 font-bold text-ok text-[11px]">Active</span>
-            </div>
-
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-semibold text-ink">Auto-Check 270 Eligibility on Patient Booking</div>
-                <div className="text-ink-3 text-[11px]">
-                  Sweep appointments 48 hours prior to DOS and trigger real-time 270 inquiry.
-                </div>
-              </div>
-              <span className="rounded bg-ok-soft px-2 py-0.5 font-bold text-ok text-[11px]">Active</span>
-            </div>
+      <div className="mt-6">
+        <Card title="Autonomous RCM Policies">
+          <p className="mb-3 text-xs text-ink-3">
+            These are live settings, not decoration — change them on the{' '}
+            <Link href="/settings/automation" className="text-grove-strong hover:underline">Automation</Link> page.
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <PolicyRow label="Auto-post balanced 835 remittances" active />
+            <PolicyRow label="Auto-transfer patient responsibility (PR codes)" active={automation?.autoTransferPatientResponsibility ?? false} />
+            <PolicyRow label="Auto-generate corrected claims (frequency 7)" active={automation?.autoCorrectedClaims ?? false} />
+            <PolicyRow label="Auto-submit claims on schedule" active={automation?.autoSubmitReadyClaims ?? false} />
           </div>
         </Card>
       </div>
     </>
+  );
+}
+
+function PolicyRow({ label, active }: { label: string; active: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-line pb-2 text-xs">
+      <span className="text-ink-2">{label}</span>
+      <span className={`rounded px-2 py-0.5 text-[11px] font-bold ${active ? 'bg-ok-soft text-ok' : 'bg-surface-sunken text-ink-3'}`}>
+        {active ? 'Active' : 'Off'}
+      </span>
+    </div>
   );
 }

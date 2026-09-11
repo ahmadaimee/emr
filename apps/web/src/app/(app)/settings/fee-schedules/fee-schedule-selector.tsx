@@ -191,7 +191,6 @@ export function FeeScheduleSelector({
                 className="flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-2.5 text-xs font-medium text-ink hover:bg-surface-sunken transition-colors"
                 title="Edit DOS effective tenure"
               >
-                <span>📅</span>
                 <span>Edit Tenure (DOS Range)</span>
               </button>
 
@@ -248,8 +247,8 @@ export function FeeScheduleSelector({
             </div>
 
             <div className="flex items-center gap-4 text-xs text-ink-3 shrink-0">
-              <div>🏛️ Payer: <strong className="text-ink">{activeSchedule.payerName}</strong></div>
-              <div>📋 Priced Lines: <strong className="text-ink">{linesCount}</strong></div>
+              <div>Payer: <strong className="text-ink">{activeSchedule.payerName}</strong></div>
+              <div>Priced Lines: <strong className="text-ink">{linesCount}</strong></div>
             </div>
           </div>
         </div>
@@ -286,7 +285,6 @@ export function FeeScheduleSelector({
             }}
             className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-sunken hover:text-grove-strong transition-colors"
           >
-            <span>📅</span>
             <span>Edit Effective Tenure (DOS Range)</span>
           </button>
 
@@ -295,7 +293,6 @@ export function FeeScheduleSelector({
             onClick={() => handleClone(contextMenu.schedule)}
             className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-sunken hover:text-grove-strong transition-colors"
           >
-            <span>📋</span>
             <span>Duplicate / Clone Schedule</span>
           </button>
 
@@ -304,7 +301,6 @@ export function FeeScheduleSelector({
             onClick={() => handleExportCsv(contextMenu.schedule)}
             className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-sunken transition-colors"
           >
-            <span>📄</span>
             <span>Export Rates to CSV</span>
           </button>
 

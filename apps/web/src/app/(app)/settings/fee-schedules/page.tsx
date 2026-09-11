@@ -25,10 +25,10 @@ export default async function FeeSchedulesPage({
 
   const data = await run('/settings/fee-schedules', async () => {
     return {
-      feeSchedules: [],
-      feeScheduleLines: [],
-      cptCodes: [],
-      dxCodes: [],
+      feeSchedules: [] as any[],
+      feeScheduleLines: [] as any[],
+      cptCodes: [] as any[],
+      dxCodes: [] as any[],
     };
   });
 
@@ -130,7 +130,6 @@ export default async function FeeSchedulesPage({
               : 'bg-surface-raised text-ink-2 hover:bg-surface-sunken border border-line'
           }`}
         >
-          <span>📑</span>
           <span>Payer Fee Schedules</span>
           <span
             className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${
@@ -149,7 +148,6 @@ export default async function FeeSchedulesPage({
               : 'bg-surface-raised text-ink-2 hover:bg-surface-sunken border border-line'
           }`}
         >
-          <span>💉</span>
           <span>CPT / HCPCS Procedures</span>
           <span
             className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${
@@ -168,7 +166,6 @@ export default async function FeeSchedulesPage({
               : 'bg-surface-raised text-ink-2 hover:bg-surface-sunken border border-line'
           }`}
         >
-          <span>🩺</span>
           <span>ICD-10 Diagnoses (Dx)</span>
           <span
             className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${

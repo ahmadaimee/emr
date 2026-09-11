@@ -118,7 +118,7 @@ export default async function RulesSettingsPage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-sm font-semibold text-ink uppercase tracking-wider">
-              ⚡ Autonomous Denial Fixation Rules (Auto-Submit & ICN Auto-Attach)
+              Autonomous Denial Fixation Rules (Auto-Submit & ICN Auto-Attach)
             </h2>
             <p className="text-xs text-ink-3 mt-0.5">
               Rules execute automatically upon 835 remittance ingestion. Matched claims auto-attach original ICN numbers, set Frequency Code 7, and re-transmit to clearinghouse.

@@ -52,7 +52,7 @@ export default async function ProvidersPage({
       <PageHeader
         title="Provider Directory & Billing Credentials"
         subtitle="Manage clinician rosters, individual NPI identifiers, specialty taxonomy codes, and clearinghouse billing privileges."
-        actions={<NewProviderModal />}
+        actions={<NewProviderModal practices={practices} />}
       />
 
       {/* KPI Cards - Uniform Small */}
@@ -211,7 +211,7 @@ export default async function ProvidersPage({
                           key={prac}
                           className="rounded bg-surface-sunken px-1.5 py-0.2 text-[10px] text-ink-2 border border-line truncate max-w-[140px]"
                         >
-                          🏥 {prac}
+                          {prac}
                         </span>
                       ))}
                     </div>

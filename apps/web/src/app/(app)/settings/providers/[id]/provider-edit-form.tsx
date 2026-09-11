@@ -124,7 +124,7 @@ export function ProviderEditForm({
       </div>
 
       {warnings.length > 0 ? (
-        <Card title="⚠ Credentials needing attention">
+        <Card title="Credentials needing attention">
           <ul className="divide-y divide-line">
             {warnings.map((w) => (
               <li key={w.label} className="flex items-center justify-between px-4 py-2 text-sm">

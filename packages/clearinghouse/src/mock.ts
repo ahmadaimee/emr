@@ -2,7 +2,10 @@ import {
   buildInterchange,
   IMPLEMENTATIONS,
   parse271,
+  parse277,
+  parse277CA,
   parse835,
+  parse999,
   seg,
   serialize,
   splitTransactionSets,
@@ -51,31 +54,60 @@ export class MockClearinghouse implements ClearinghouseAdapter {
     const req = this.submissions.get(submissionId);
     if (!req) return { meta: { connector: 'mock', durationMs: 1, costCents: 0 }, acknowledgments: [] };
     const now = new Date();
+    const ts = new Date('2026-09-01T13:00:00Z');
+
+    // 999 — the mock only ever fails at the 277CA, so the interchange itself always
+    // parses cleanly. Round-tripped through the real parser for the same reason the
+    // 271/835 builders above are: this is what exercises `@grove/x12` against the app.
+    const raw999 = serialize(
+      buildInterchange(
+        { sender: { qualifier: 'ZZ', id: 'MOCKCH' }, receiver: { qualifier: 'ZZ', id: 'GROVE' }, controlNumber: this.counter++, usage: 'T', timestamp: ts },
+        { functionalId: 'FA', controlNumber: this.counter, version: IMPLEMENTATIONS['999'] },
+        [{ type: '999', implementation: IMPLEMENTATIONS['999'], controlNumber: 1, body: [seg('AK1', 'HC', this.counter), seg('AK2', '837', '0001'), seg('AK5', 'A'), seg('AK9', 'A', '1', '1', '1')] }],
+      ),
+    );
+    parse999(splitTransactionSets(tokenize(raw999))[0]!);
+
+    // 277CA — one HL*PT loop per submitted claim.
+    const caBody = [
+      seg('BHT', '0085', '08', String(this.counter), '20260901', '1300', 'TH'),
+      seg('HL', 1, '', '20', '1'),
+      seg('NM1', 'AY', '2', 'MOCK CLEARINGHOUSE', '', '', '', '', '46', 'MOCKCH'),
+      seg('HL', 2, 1, '21', '1'),
+      seg('NM1', '41', '2', 'GROVE SUBMITTER', '', '', '', '', '46', 'GROVE'),
+    ];
+    let hl = 2;
+    for (const pcn of req.patientControlNumbers) {
+      const reject = pcn.includes('REJECT');
+      caBody.push(seg('HL', ++hl, 2, 'PT'));
+      caBody.push(seg('TRN', '2', pcn));
+      caBody.push(reject ? seg('STC', ['A7', '562'], '20260901', 'U') : seg('STC', ['A2', '20'], '20260901', 'WQ'));
+      if (!reject) caBody.push(seg('REF', '1K', `MOCK${pcn.replace(/\D/g, '').padStart(10, '0')}`));
+    }
+    const raw277ca = serialize(
+      buildInterchange(
+        { sender: { qualifier: 'ZZ', id: 'MOCKCH' }, receiver: { qualifier: 'ZZ', id: 'GROVE' }, controlNumber: this.counter++, usage: 'T', timestamp: ts },
+        { functionalId: 'HN', controlNumber: this.counter, version: IMPLEMENTATIONS['277CA'] },
+        [{ type: '277', implementation: IMPLEMENTATIONS['277CA'], controlNumber: 1, body: caBody }],
+      ),
+    );
+    const ca = parse277CA(splitTransactionSets(tokenize(raw277ca))[0]!);
+
     return {
       meta: { connector: 'mock', durationMs: 1, costCents: 0 },
       acknowledgments: [
-        { type: 'x999', result: 'A', receivedAt: now },
-        ...req.patientControlNumbers.map((pcn) =>
-          pcn.includes('REJECT')
-            ? {
-                type: 'x277ca' as const,
-                result: 'R' as const,
-                patientControlNumber: pcn,
-                statusCategoryCode: 'A7',
-                statusCode: '562',
-                message: 'Entity\'s National Provider Identifier (NPI) is invalid',
-                receivedAt: now,
-              }
-            : {
-                type: 'x277ca' as const,
-                result: 'A' as const,
-                patientControlNumber: pcn,
-                payerClaimControlNumber: `MOCK${pcn.replace(/\D/g, '').padStart(10, '0')}`,
-                statusCategoryCode: 'A1',
-                statusCode: '19',
-                receivedAt: now,
-              },
-        ),
+        { type: 'x999', result: 'A', receivedAt: now, raw: raw999 },
+        ...ca.claims.map((c) => ({
+          type: 'x277ca' as const,
+          result: (c.status.categoryCode === 'A7' ? 'R' : 'A') as 'A' | 'R',
+          patientControlNumber: c.patientControlNumber,
+          payerClaimControlNumber: c.payerClaimControlNumber,
+          statusCategoryCode: c.status.categoryCode,
+          statusCode: c.status.statusCode,
+          message: c.status.categoryCode === 'A7' ? 'Entity\'s National Provider Identifier (NPI) is invalid' : undefined,
+          receivedAt: now,
+          raw: raw277ca,
+        })),
       ],
     };
   }
@@ -130,15 +162,49 @@ export class MockClearinghouse implements ClearinghouseAdapter {
 
   async checkClaimStatus(req: ClaimStatusRequest): Promise<ClaimStatusResult> {
     const denied = req.patientControlNumber.includes('DENY');
+    const paidCents = denied ? 0 : Math.round(req.totalChargeCents * 0.75);
+    const payerControl = req.payerClaimControlNumber ?? `MOCK${req.patientControlNumber.replace(/\D/g, '').padStart(10, '0')}`;
+
+    const body = [
+      seg('BHT', '0010', '11', req.traceNumber, '20260903', '1200'),
+      seg('HL', 1, '', '20', '1'),
+      seg('NM1', 'PR', '2', 'MOCK PAYER', '', '', '', '', 'PI', req.payerId),
+      seg('HL', 2, 1, '21', '1'),
+      seg('NM1', '1P', '2', 'PROVIDER', '', '', '', '', 'XX', req.billingProviderNpi),
+      seg('HL', 3, 2, '22', '0'),
+      seg('NM1', 'IL', '1', req.subscriber.lastName, req.subscriber.firstName, '', '', '', 'MI', req.subscriberMemberId),
+      seg('TRN', '2', req.traceNumber),
+      seg('REF', 'EJ', req.patientControlNumber),
+      seg('REF', '1K', payerControl),
+      seg(
+        'STC',
+        denied ? ['F2', '96'] : ['F1', '65'],
+        '20260903',
+        'WQ',
+        (req.totalChargeCents / 100).toFixed(2),
+        (paidCents / 100).toFixed(2),
+      ),
+    ];
+    const raw277 = serialize(
+      buildInterchange(
+        { sender: { qualifier: 'ZZ', id: 'MOCKPAYER' }, receiver: { qualifier: 'ZZ', id: 'GROVE' }, controlNumber: this.counter++, usage: 'T', timestamp: new Date('2026-09-03T12:00:00Z') },
+        { functionalId: 'HN', controlNumber: this.counter, version: IMPLEMENTATIONS['277'] },
+        [{ type: '277', implementation: IMPLEMENTATIONS['277'], controlNumber: 1, body }],
+      ),
+    );
+    const parsed = parse277(splitTransactionSets(tokenize(raw277))[0]!);
+    const status = parsed.claims[0]?.statuses[0]!;
+
     return {
       meta: { connector: 'mock', durationMs: 8, costCents: 0 },
-      statusCategoryCode: denied ? 'F2' : 'F1',
-      statusCode: denied ? '96' : '65',
+      raw277,
+      statusCategoryCode: status.categoryCode,
+      statusCode: status.statusCode,
       statusDescription: denied ? 'Finalized/Denial' : 'Finalized/Payment',
       isFinal: true,
-      paidAmountCents: denied ? 0 : Math.round(req.totalChargeCents * 0.75),
-      effectiveDate: '2026-09-03',
-      payerClaimControlNumber: req.payerClaimControlNumber,
+      paidAmountCents: status.totalPaidCents,
+      effectiveDate: status.effectiveDate,
+      payerClaimControlNumber: payerControl,
     };
   }
 

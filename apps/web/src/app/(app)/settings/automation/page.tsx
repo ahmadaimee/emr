@@ -24,6 +24,8 @@ export default async function AutomationSettingsPage() {
         autoSubmitSecondary: false,
         autoTransferPatientResponsibility: true,
         autoCorrectedClaims: false,
+        autoSubmitReadyClaims: false,
+        autoSubmitHourUtc: 13,
       }
     );
   });

@@ -104,7 +104,6 @@ export function EditTenureModal({
           {/* DOS Tenure Range Box */}
           <div className="rounded-lg border border-grove/40 bg-grove-soft/20 p-3.5 space-y-2.5">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-grove-strong">
-              <span>📅</span>
               <span>Date of Service (DOS) Effective Tenure Window</span>
             </div>
             <p className="text-[11px] text-ink-3">

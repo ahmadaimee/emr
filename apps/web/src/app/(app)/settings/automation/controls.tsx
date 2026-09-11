@@ -14,6 +14,8 @@ interface AutomationControlsProps {
     autoSubmitSecondary: boolean;
     autoTransferPatientResponsibility: boolean;
     autoCorrectedClaims: boolean;
+    autoSubmitReadyClaims: boolean;
+    autoSubmitHourUtc: number;
   };
 }
 
@@ -102,6 +104,35 @@ export function AutomationControls({ settings }: AutomationControlsProps) {
 
         <div className="rounded-xl border border-line bg-surface-raised p-5 space-y-4">
           <h3 className="text-sm font-semibold text-ink">Autonomous RCM Capabilities</h3>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="autoSubmitReadyClaims"
+              defaultChecked={settings.autoSubmitReadyClaims}
+              className="mt-0.5 rounded border-line-strong text-grove focus:ring-grove"
+            />
+            <div className="flex-1">
+              <div className="text-xs font-medium text-ink">Auto-Submit "Ready" Claims on a Schedule</div>
+              <div className="text-xs text-ink-3">
+                Every claim sitting in Ready status gets submitted electronically with no human touch, once a day at the hour below.
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <label className="text-[11px] text-ink-3" htmlFor="autoSubmitHourUtc">Run at</label>
+                <select
+                  id="autoSubmitHourUtc"
+                  name="autoSubmitHourUtc"
+                  defaultValue={settings.autoSubmitHourUtc}
+                  className="h-7 rounded-md border border-line-strong bg-surface px-2 text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>{String(h).padStart(2, '0')}:00 UTC</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </label>
 
           <label className="flex items-start gap-3 cursor-pointer">
             <input

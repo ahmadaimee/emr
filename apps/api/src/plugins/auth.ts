@@ -17,9 +17,9 @@ declare module 'fastify' {
  * Unauthenticated requests get an identical 401 regardless of why.
  */
 async function authPlugin(app: FastifyInstance) {
-  app.decorateRequest('tenant', null);
-  app.decorateRequest('actor', null);
-  app.decorateRequest('authKind', null);
+  app.decorateRequest('tenant', null, []);
+  app.decorateRequest('actor', null, []);
+  app.decorateRequest('authKind', null, []);
 
   app.addHook('onRequest', async (req, reply) => {
     if (isPublic(req)) return;
@@ -41,7 +41,9 @@ async function authPlugin(app: FastifyInstance) {
 }
 
 function isPublic(req: FastifyRequest): boolean {
-  return req.url === '/health' || req.url.startsWith('/docs') || req.url === '/openapi.json';
+  // The Stedi webhook carries its own shared-secret check (see routes/v1/webhooks.ts)
+  // instead of a Grove bearer token — the clearinghouse cannot hold one of ours.
+  return req.url === '/health' || req.url.startsWith('/docs') || req.url === '/openapi.json' || req.url === '/v1/webhooks/stedi';
 }
 
 export default fp(authPlugin, { name: 'grove-auth' });

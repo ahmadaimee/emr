@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyError, FastifyInstance, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 import { ForbiddenError } from '@grove/auth';
 import { DomainError } from '@grove/domain';
@@ -19,11 +19,11 @@ function titleFor(status: number): string {
 }
 
 async function problemPlugin(app: FastifyInstance) {
-  app.setErrorHandler((err, req, reply) => {
+  app.setErrorHandler<FastifyError>((err, req, reply) => {
     if (err instanceof DomainError) return problem(reply, err.status, err.code, err.message, err.detail ? { errors: err.detail } : {});
     if (err instanceof ForbiddenError) return problem(reply, 403, 'forbidden', `Missing permission ${err.permission}`, { reason: err.decision.reason });
-    if ((err as { validation?: unknown }).validation) return problem(reply, 400, 'validation_error', err.message, { errors: (err as { validation: unknown }).validation });
-    if ((err as { statusCode?: number }).statusCode === 429) return problem(reply, 429, 'rate_limited', 'Rate limit exceeded');
+    if (err.validation) return problem(reply, 400, 'validation_error', err.message, { errors: err.validation });
+    if (err.statusCode === 429) return problem(reply, 429, 'rate_limited', 'Rate limit exceeded');
     req.log.error({ err, requestId: req.id }, 'unhandled error');
     return problem(reply, 500, 'internal_error', 'An unexpected error occurred');
   });

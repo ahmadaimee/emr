@@ -12,6 +12,7 @@ import { claimRoutes } from './routes/v1/claims';
 import { eligibilityRoutes } from './routes/v1/eligibility';
 import { remittanceRoutes } from './routes/v1/remittances';
 import { taskRoutes } from './routes/v1/tasks';
+import { webhookRoutes } from './routes/v1/webhooks';
 
 /**
  * The public API. A separate service from the web app because it is a product surface
@@ -75,6 +76,7 @@ export async function buildServer() {
   await app.register(claimRoutes);
   await app.register(remittanceRoutes);
   await app.register(taskRoutes);
+  await app.register(webhookRoutes);
 
   return app;
 }

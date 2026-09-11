@@ -22,7 +22,9 @@
     "@grove/domain": "workspace:*",
     "@grove/x12": "workspace:*",
     "fastify": "5.12.3",
+    "fastify-plugin": "^5.1.0",
     "fastify-type-provider-zod": "^5.0.0",
+    "pg-boss": "12.30.0",
     "zod": "4.6.1"
   },
   "devDependencies": {

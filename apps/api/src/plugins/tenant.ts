@@ -22,8 +22,8 @@ const clearinghouse = createClearinghouse();
  * collector, and (for writes) an idempotency record.
  */
 async function tenantPlugin(app: FastifyInstance) {
-  app.decorateRequest('phi', null);
-  app.decorateRequest('command', null);
+  app.decorateRequest('phi', null, []);
+  app.decorateRequest('command', null, []);
 
   app.addHook('preHandler', async (req, reply) => {
     if (!req.tenant) return;

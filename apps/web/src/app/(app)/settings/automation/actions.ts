@@ -42,6 +42,8 @@ export async function updateAutomation(formData: FormData) {
   const autoSubmitSecondary = formData.get('autoSubmitSecondary') === 'on';
   const autoTransferPatientResponsibility = formData.get('autoTransferPatientResponsibility') === 'on';
   const autoCorrectedClaims = formData.get('autoCorrectedClaims') === 'on';
+  const autoSubmitReadyClaims = formData.get('autoSubmitReadyClaims') === 'on';
+  const autoSubmitHourUtc = Math.min(23, Math.max(0, Number(formData.get('autoSubmitHourUtc')) || 0));
 
   const { run, session } = await pageContext();
   await run('/settings/automation', async (ctx) => {
@@ -54,6 +56,8 @@ export async function updateAutomation(formData: FormData) {
         autoSubmitSecondary,
         autoTransferPatientResponsibility,
         autoCorrectedClaims,
+        autoSubmitReadyClaims,
+        autoSubmitHourUtc,
         updatedAt: new Date(),
       })
       .where(sql`practice_id is null`);
