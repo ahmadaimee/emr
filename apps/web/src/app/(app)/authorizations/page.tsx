@@ -1,8 +1,10 @@
 import Link from 'next/link';
+import { desc, eq, schema, sql } from '@grove/db';
 import { Card, Empty, Kpi, PageHeader, StatusPill } from '@/components/ui';
 import { date, relative } from '@/lib/format';
 import { pageContext } from '@/lib/session';
 import { NewAuthModal } from './new-auth-modal';
+import { DecisionButton } from './decision-button';
 
 export const metadata = { title: 'Prior Authorizations & Referrals' };
 
@@ -16,18 +18,72 @@ export default async function AuthorizationsPage({
   const currentStatus = sp.status ?? 'all';
   const { run } = await pageContext();
 
-  const data = await run('/authorizations', async () => {
+  const data = await run('/authorizations', async (ctx) => {
+    const rows = await ctx.tx
+      .select({
+        id: schema.authorizations.id,
+        status: schema.authorizations.status,
+        urgency: schema.authorizations.urgency,
+        procedureCodes: schema.authorizations.procedureCodes,
+        unitsRequested: schema.authorizations.unitsRequested,
+        unitsApproved: schema.authorizations.unitsApproved,
+        unitsUsed: schema.authorizations.unitsUsed,
+        serviceDateFrom: schema.authorizations.serviceDateFrom,
+        expiresOn: schema.authorizations.expiresOn,
+        authorizationNumber: schema.authorizations.authorizationNumber,
+        dueAt: schema.authorizations.dueAt,
+        patientId: schema.authorizations.patientId,
+        patientFirst: schema.patients.firstName,
+        patientLast: schema.patients.lastName,
+        mrn: schema.patients.mrn,
+        payerName: schema.payers.name,
+      })
+      .from(schema.authorizations)
+      .innerJoin(schema.patients, eq(schema.patients.id, schema.authorizations.patientId))
+      .innerJoin(schema.payers, eq(schema.payers.id, schema.authorizations.payerId))
+      .orderBy(desc(schema.authorizations.createdAt))
+      .limit(200);
+
+    const [counts] = await ctx.tx.execute<{ pending: string; approved: string; expiring: string }>(sql`
+      select
+        count(*) filter (where status in ('submitted','pending'))::text as pending,
+        count(*) filter (where status in ('approved','partially_approved'))::text as approved,
+        count(*) filter (where status in ('approved','partially_approved') and expires_on is not null and expires_on <= current_date + 14)::text as expiring
+      from authorizations
+    `);
+
+    const patients = await ctx.tx.select({ id: schema.patients.id, first: schema.patients.firstName, last: schema.patients.lastName, mrn: schema.patients.mrn }).from(schema.patients).limit(300);
+    const payers = await ctx.tx.select({ id: schema.payers.id, name: schema.payers.name }).from(schema.payers).limit(200);
+    const providers = await ctx.tx.select({ id: schema.providers.id, first: schema.providers.firstName, last: schema.providers.lastName }).from(schema.providers).limit(200);
+
     return {
       summary: {
-        pendingCount: 14,
-        approvedCount: 38,
-        expiringSoonCount: 4,
-        totalReferralsCount: 18,
+        pendingCount: Number(counts?.pending ?? 0),
+        approvedCount: Number(counts?.approved ?? 0),
+        expiringSoonCount: Number(counts?.expiring ?? 0),
+        totalReferralsCount: 0,
       },
-      authorizations: [],
+      authorizations: rows.map((r) => ({
+        id: r.id,
+        authNumber: r.authorizationNumber ?? '—',
+        patientId: r.patientId,
+        patientName: `${r.patientLast}, ${r.patientFirst}`,
+        mrn: r.mrn,
+        payerName: r.payerName,
+        procedureCode: r.procedureCodes[0] ?? '—',
+        procedureName: r.procedureCodes.length > 1 ? `+${r.procedureCodes.length - 1} more` : '',
+        unitsUsed: r.unitsUsed,
+        unitsApproved: r.unitsApproved ?? r.unitsRequested ?? '—',
+        startDate: r.serviceDateFrom,
+        expirationDate: r.expiresOn,
+        urgency: r.urgency,
+        status: r.status,
+        dueAt: r.dueAt,
+      })),
       referrals: [],
-      patients: [],
-      payers: [],
+      patients: patients.map((p) => ({ id: p.id, name: `${p.last}, ${p.first}`, mrn: p.mrn })),
+      payers,
+      providers: providers.map((p) => ({ id: p.id, name: `${p.last}, ${p.first}` })),
     };
   });
 
@@ -42,6 +98,7 @@ export default async function AuthorizationsPage({
     referrals = [],
     patients = [],
     payers = [],
+    providers = [],
   } = data;
 
   const filteredAuths =
@@ -54,7 +111,7 @@ export default async function AuthorizationsPage({
       <PageHeader
         title="Prior Authorizations & Referrals"
         subtitle="Manage pre-service payer authorizations, clinical necessity submissions, and specialist referral tracking."
-        actions={<NewAuthModal patients={patients} payers={payers} />}
+        actions={<NewAuthModal patients={patients} payers={payers} providers={providers} />}
       />
 
       {/* KPI Cards */}
@@ -100,7 +157,6 @@ export default async function AuthorizationsPage({
                 : 'bg-surface-raised text-ink-2 hover:bg-surface-sunken border border-line'
             }`}
           >
-            <span>🛡️</span>
             <span>Prior Authorizations</span>
             <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${currentView === 'auths' ? 'bg-white/20 text-white' : 'bg-surface-sunken text-ink-3'}`}>
               {authorizations.length}
@@ -115,7 +171,6 @@ export default async function AuthorizationsPage({
                 : 'bg-surface-raised text-ink-2 hover:bg-surface-sunken border border-line'
             }`}
           >
-            <span>🔄</span>
             <span>Clinical Referrals</span>
             <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${currentView === 'referrals' ? 'bg-white/20 text-white' : 'bg-surface-sunken text-ink-3'}`}>
               {referrals.length}
@@ -146,6 +201,7 @@ export default async function AuthorizationsPage({
                       <th className="px-3 py-2">Effective Period</th>
                       <th className="px-3 py-2">Urgency</th>
                       <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line text-xs">
@@ -186,6 +242,9 @@ export default async function AuthorizationsPage({
                         </td>
                         <td className="px-3 py-2.5">
                           <StatusPill status={a.status} />
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          {['submitted', 'pending'].includes(a.status) && <DecisionButton authorizationId={a.id} />}
                         </td>
                       </tr>
                     ))}
