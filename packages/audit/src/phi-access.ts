@@ -46,6 +46,14 @@ export class PhiAccessCollector {
 
   async flush(tx: TenantTx, resourceType: string): Promise<void> {
     if (this.isEmpty) return;
+    // drizzle's `sql` template expands a plain JS array into a parenthesised parameter
+    // list (`($1, $2, ...)`), meant for `IN (...)` — casting that to `uuid[]`/`text[]`
+    // fails with "cannot cast type record to uuid[]". Passing a Postgres array-literal
+    // string instead (`{a,b,c}`) keeps it a single bind parameter that casts cleanly.
+    // Safe here because patient IDs are UUIDs and field classes are a fixed enum — no
+    // value can contain a comma, brace, or quote.
+    const patientIdsLiteral = `{${[...this.patientIds].join(',')}}`;
+    const fieldClassesLiteral = `{${[...this.fieldClasses].join(',')}}`;
     await tx.execute(sql`
       insert into phi_access_events (
         org_id, actor_user_id, actor_type, session_id, request_id, elevation_id, route, purpose,
@@ -53,8 +61,8 @@ export class PhiAccessCollector {
       ) values (
         ${this.ctx.orgId}, ${this.ctx.actorUserId}, ${this.ctx.actorType}, ${this.ctx.sessionId},
         ${this.ctx.requestId}, ${this.ctx.elevationId ?? null}, ${this.ctx.route}, ${this.ctx.purpose ?? 'payment'},
-        ${resourceType}, ${[...this.patientIds]}::uuid[], ${this.recordCount},
-        ${[...this.fieldClasses]}::text[], ${this.export}, ${this.ctx.ipAddress ?? null}
+        ${resourceType}, ${patientIdsLiteral}::uuid[], ${this.recordCount},
+        ${fieldClassesLiteral}::text[], ${this.export}, ${this.ctx.ipAddress ?? null}
       )
     `);
   }
