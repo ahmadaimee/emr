@@ -11,14 +11,17 @@ interface AddCoverageModalProps {
 
 export function AddCoverageModal({ patientId, payers }: AddCoverageModalProps) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
-      await addCoverage(formData);
-      setOpen(false);
+      const res = await addCoverage(formData);
+      if (res.ok) setOpen(false);
+      else setError(res.error);
     });
   };
 
@@ -35,6 +38,10 @@ export function AddCoverageModal({ patientId, payers }: AddCoverageModalProps) {
             <p className="mt-1 text-xs text-ink-3">
               Sets up coverage rank (Primary / Secondary / Tertiary) for coordination of benefits (COB).
             </p>
+
+            {error ? (
+              <div className="mt-3 rounded-md border border-danger/30 bg-danger-soft p-2.5 text-xs text-danger">{error}</div>
+            ) : null}
 
             <form onSubmit={handleSubmit} className="mt-4 space-y-3">
               <input type="hidden" name="patientId" value={patientId} />

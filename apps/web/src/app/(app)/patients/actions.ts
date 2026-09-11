@@ -10,7 +10,7 @@ import { pageContext } from '@/lib/session';
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
-export async function createPatient(formData: FormData) {
+export async function createPatient(formData: FormData): Promise<{ success: true; patientId: string } | { success: false; error: string }> {
   const firstName = (formData.get('firstName') as string)?.trim();
   const lastName = (formData.get('lastName') as string)?.trim();
   const dateOfBirth = formData.get('dateOfBirth') as string;
@@ -20,68 +20,72 @@ export async function createPatient(formData: FormData) {
   const practiceId = formData.get('practiceId') as string;
 
   if (!firstName || !lastName || !dateOfBirth) {
-    throw new Error('First name, last name, and date of birth are required');
+    return { success: false, error: 'First name, last name, and date of birth are required.' };
   }
 
   const { run, session } = await pageContext();
-  const patientId = await run('/patients', async (ctx, phi) => {
-    // 1. Check for duplicates in practice
-    const duplicates = await ctx.tx
-      .select({ id: schema.patients.id, mrn: schema.patients.mrn })
-      .from(schema.patients)
-      .where(
-        and(
-          eq(schema.patients.practiceId, practiceId),
-          sql`lower(${schema.patients.firstName}) = lower(${firstName})`,
-          sql`lower(${schema.patients.lastName}) = lower(${lastName})`,
-          eq(schema.patients.dateOfBirth, dateOfBirth)
-        )
-      );
+  try {
+    const patientId = await run('/patients', async (ctx, phi) => {
+      // 1. Check for duplicates in practice
+      const duplicates = await ctx.tx
+        .select({ id: schema.patients.id, mrn: schema.patients.mrn })
+        .from(schema.patients)
+        .where(
+          and(
+            eq(schema.patients.practiceId, practiceId),
+            sql`lower(${schema.patients.firstName}) = lower(${firstName})`,
+            sql`lower(${schema.patients.lastName}) = lower(${lastName})`,
+            eq(schema.patients.dateOfBirth, dateOfBirth)
+          )
+        );
 
-    if (duplicates.length > 0) {
-      throw new Error(`Potential duplicate patient detected with MRN ${duplicates[0]!.mrn}.`);
-    }
+      if (duplicates.length > 0) {
+        throw new Error(`Potential duplicate patient detected with MRN ${duplicates[0]!.mrn}.`);
+      }
 
-    // 2. Generate MRN
-    const mrn = `MRN${Math.floor(100000 + Math.random() * 900000)}`;
-    const id = randomUUID();
+      // 2. Generate MRN
+      const mrn = `MRN${Math.floor(100000 + Math.random() * 900000)}`;
+      const id = randomUUID();
 
-    await ctx.tx.insert(schema.patients).values({
-      id,
-      orgId: ctx.tenant.orgId,
-      practiceId,
-      mrn,
-      firstName,
-      lastName,
-      dateOfBirth,
-      sex,
-      email,
-      phoneMobile: phone,
+      await ctx.tx.insert(schema.patients).values({
+        id,
+        orgId: ctx.tenant.orgId,
+        practiceId,
+        mrn,
+        firstName,
+        lastName,
+        dateOfBirth,
+        sex,
+        email,
+        phoneMobile: phone,
+      });
+
+      phi.touch([id], ['demographics']);
+
+      // 3. Audit
+      await appendAuditEvent(ctx.tx, {
+        orgId: ctx.tenant.orgId,
+        action: 'create',
+        resourceType: 'patient',
+        resourceId: id,
+        patientId: id,
+        actorUserId: session.actor.userId,
+        sessionId: session.sessionId,
+        requestId: ctx.tenant.requestId,
+        context: { mrn, name: `${lastName}, ${firstName}` },
+      });
+
+      return id;
     });
 
-    phi.touch([id], ['demographics']);
-
-    // 3. Audit
-    await appendAuditEvent(ctx.tx, {
-      orgId: ctx.tenant.orgId,
-      action: 'create',
-      resourceType: 'patient',
-      resourceId: id,
-      patientId: id,
-      actorUserId: session.actor.userId,
-      sessionId: session.sessionId,
-      requestId: ctx.tenant.requestId,
-      context: { mrn, name: `${lastName}, ${firstName}` },
-    });
-
-    return id;
-  });
-
-  revalidatePath('/patients');
-  return { success: true, patientId };
+    revalidatePath('/patients');
+    return { success: true, patientId };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to register patient.' };
+  }
 }
 
-export async function addCoverage(formData: FormData) {
+export async function addCoverage(formData: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
   const patientId = formData.get('patientId') as string;
   const payerId = formData.get('payerId') as string;
   const memberId = (formData.get('memberId') as string)?.trim();
@@ -90,41 +94,46 @@ export async function addCoverage(formData: FormData) {
   const relationshipCode = (formData.get('relationshipCode') as string) || '18';
 
   if (!patientId || !payerId || !memberId) {
-    throw new Error('Patient, payer, and member ID are required');
+    return { ok: false, error: 'Patient, payer, and member ID are required.' };
   }
 
   const { run, session } = await pageContext();
-  await run(`/patients/${patientId}/coverage`, async (ctx, phi) => {
-    phi.touch([patientId], ['financial']);
-    const id = randomUUID();
+  try {
+    await run(`/patients/${patientId}/coverage`, async (ctx, phi) => {
+      phi.touch([patientId], ['financial']);
+      const id = randomUUID();
 
-    await ctx.tx.insert(schema.coverages).values({
-      id,
-      orgId: ctx.tenant.orgId,
-      patientId,
-      payerId,
-      rank,
-      memberId,
-      groupNumber,
-      relationshipCode,
-      assignmentOfBenefits: true,
-      releaseOfInformation: 'Y',
+      await ctx.tx.insert(schema.coverages).values({
+        id,
+        orgId: ctx.tenant.orgId,
+        patientId,
+        payerId,
+        rank,
+        memberId,
+        groupNumber,
+        relationshipCode,
+        assignmentOfBenefits: true,
+        releaseOfInformation: 'Y',
+      });
+
+      await appendAuditEvent(ctx.tx, {
+        orgId: ctx.tenant.orgId,
+        action: 'create',
+        resourceType: 'coverage',
+        resourceId: id,
+        patientId,
+        actorUserId: session.actor.userId,
+        sessionId: session.sessionId,
+        requestId: ctx.tenant.requestId,
+        context: { rank, memberId },
+      });
     });
 
-    await appendAuditEvent(ctx.tx, {
-      orgId: ctx.tenant.orgId,
-      action: 'create',
-      resourceType: 'coverage',
-      resourceId: id,
-      patientId,
-      actorUserId: session.actor.userId,
-      sessionId: session.sessionId,
-      requestId: ctx.tenant.requestId,
-      context: { rank, memberId },
-    });
-  });
-
-  revalidatePath(`/patients/${patientId}`);
+    revalidatePath(`/patients/${patientId}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Failed to add coverage.' };
+  }
 }
 
 export async function createSoapNote(formData: FormData): Promise<{ ok: true } | { ok: false; error: string }> {

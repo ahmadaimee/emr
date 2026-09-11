@@ -7,9 +7,17 @@ import { Button } from '@/components/ui';
 
 interface NewPatientModalProps {
   practices: Array<{ id: string; name: string }>;
+  /**
+   * When provided, creation does not navigate to the new chart — the caller decides
+   * what happens next (e.g. select the patient inline in another form). When omitted,
+   * the default flow navigates to /patients/[id].
+   */
+  onCreated?: (patient: { id: string; name: string }) => void;
+  /** Custom trigger, e.g. a small inline "+ New Patient" link instead of the default button. */
+  trigger?: (open: () => void) => React.ReactNode;
 }
 
-export function NewPatientModal({ practices }: NewPatientModalProps) {
+export function NewPatientModal({ practices, onCreated, trigger }: NewPatientModalProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -22,23 +30,29 @@ export function NewPatientModal({ practices }: NewPatientModalProps) {
     const formData = new FormData(form);
 
     startTransition(async () => {
-      try {
-        const res = await createPatient(formData);
-        if (res.success) {
-          setOpen(false);
+      const res = await createPatient(formData);
+      if (res.success) {
+        setOpen(false);
+        if (onCreated) {
+          const lastName = (formData.get('lastName') as string)?.trim();
+          const firstName = (formData.get('firstName') as string)?.trim();
+          onCreated({ id: res.patientId, name: `${lastName}, ${firstName}` });
+        } else {
           router.push(`/patients/${res.patientId}`);
         }
-      } catch (err: any) {
-        setError(err.message || 'Failed to register patient');
+      } else {
+        setError(res.error);
       }
     });
   };
 
   return (
     <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Register New Patient
-      </Button>
+      {trigger ? trigger(() => setOpen(true)) : (
+        <Button variant="primary" onClick={() => setOpen(true)}>
+          Register New Patient
+        </Button>
+      )}
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">

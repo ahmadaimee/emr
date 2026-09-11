@@ -53,7 +53,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
         subtitle={`${rows.length}${rows.length === 200 ? '+' : ''} shown`}
         actions={
           <div className="flex items-center gap-2">
-            <NewClaimModal patients={newClaimPatients ?? []} providers={newClaimProviders ?? []} />
+            <NewClaimModal patients={newClaimPatients ?? []} providers={newClaimProviders ?? []} practices={practices ?? []} />
             <BulkSubmit />
           </div>
         }

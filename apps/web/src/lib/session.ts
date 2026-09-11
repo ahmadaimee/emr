@@ -41,6 +41,33 @@ export const SESSION_COOKIE = 'grove_session';
 
 const clearinghouse = createClearinghouse();
 
+/**
+ * True only for errors that mean the database itself could not be reached (connection
+ * refused/reset, DNS failure, timeout) — the cases the demo fallback exists for. A
+ * `PostgresError` from a real query (constraint violation, bad SQL) or a plain `Error`
+ * thrown by application validation code is a real failure that must reach the caller,
+ * not something to paper over with synthetic data.
+ */
+function isDatabaseUnavailableError(err: any): boolean {
+  const code = err?.code;
+  const connectionCodes = new Set([
+    'ECONNREFUSED',
+    'ECONNRESET',
+    'ENOTFOUND',
+    'ETIMEDOUT',
+    'EHOSTUNREACH',
+    'CONNECTION_ENDED',
+    'CONNECT_TIMEOUT',
+    'CONNECTION_CLOSED',
+    'CONNECTION_DESTROYED',
+  ]);
+  if (typeof code === 'string' && connectionCodes.has(code)) return true;
+  // postgres.js query-level failures (syntax errors, constraint violations, etc.) carry
+  // a SQLSTATE five-character code and a `severity` field; connection failures do not.
+  if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code) && err?.severity) return false;
+  return false;
+}
+
 function resolveRouteFallback(route: string): any {
   if (route === '/layout') {
     return {
@@ -163,6 +190,12 @@ export async function pageContext(): Promise<PageContext> {
           return result;
         });
       } catch (err: any) {
+        // Only fall back to synthetic data when the database itself is unreachable.
+        // A validation error thrown by the callback (e.g. "duplicate patient") or a
+        // real constraint violation must reach the caller — silently swallowing it and
+        // returning fake "success" data would mean a write action reports success while
+        // writing nothing.
+        if (!isDatabaseUnavailableError(err)) throw err;
         console.warn(`[PracticeOS Demo Fallback] DB unavailable for ${route}, serving synthetic data:`, err?.message ?? err);
         return resolveRouteFallback(route) as T;
       }

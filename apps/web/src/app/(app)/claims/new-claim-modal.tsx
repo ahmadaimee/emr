@@ -6,6 +6,7 @@ import { PLACE_OF_SERVICE_CODES } from '@grove/codes';
 import { CodeAutocomplete } from '@/components/code-autocomplete';
 import { searchDiagnosisCodes, searchProcedureCodes } from '@/lib/code-lookup';
 import { createClaimAction } from './actions';
+import { PatientPicker, type PatientOption } from './patient-picker';
 
 const field =
   'w-full h-8 rounded-md border border-line-strong bg-surface px-2.5 text-xs text-ink focus:border-grove focus:outline-hidden';
@@ -23,14 +24,17 @@ interface Line {
 const emptyLine = (): Line => ({ procedureCode: '', modifiers: '', units: '1', chargeDollars: '', diagnosisPointers: '1' });
 
 export function NewClaimModal({
-  patients,
+  patients: initialPatients,
   providers,
+  practices,
 }: {
-  patients: Array<{ id: string; name: string }>;
+  patients: PatientOption[];
   providers: Array<{ id: string; name: string }>;
+  practices: Array<{ id: string; name: string }>;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [patients, setPatients] = useState<PatientOption[]>(initialPatients);
   const [patientId, setPatientId] = useState('');
   const [renderingProviderId, setRenderingProviderId] = useState('');
   const [serviceDate, setServiceDate] = useState(new Date().toISOString().slice(0, 10));
@@ -127,12 +131,13 @@ export function NewClaimModal({
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-ink-2">Patient *</label>
-                  <select required value={patientId} onChange={(e) => setPatientId(e.target.value)} className={field}>
-                    <option value="">Select a patient…</option>
-                    {patients.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  <PatientPicker
+                    patients={patients}
+                    practices={practices}
+                    value={patientId}
+                    onChange={setPatientId}
+                    onPatientCreated={(p) => setPatients((prev) => [p, ...prev])}
+                  />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-ink-2">Rendering Provider *</label>
