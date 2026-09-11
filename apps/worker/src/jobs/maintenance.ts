@@ -1,4 +1,4 @@
-import type PgBoss from 'pg-boss';
+import type { PgBoss } from 'pg-boss';
 import { verifyChain } from '@grove/audit';
 import { eq, listOrganizationIds, schema, sql } from '@grove/db';
 import { forOrg } from '../context';

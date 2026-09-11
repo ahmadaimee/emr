@@ -1,4 +1,4 @@
-import type PgBoss from 'pg-boss';
+import type { Job, PgBoss } from 'pg-boss';
 import { recordActivity } from '@grove/audit';
 import { and, eq, listOrganizationIds, schema, sql } from '@grove/db';
 import { createTask, emit, submitClaimCommand, transitionClaim } from '@grove/domain';
@@ -10,14 +10,14 @@ interface AckJob { orgId: string; claimId: string; submissionId: string; connect
 interface StatusJob { orgId: string; claimId: string; attempt: number }
 
 export async function registerClaimJobs(boss: PgBoss): Promise<void> {
-  await boss.work<SubmitJob>(Q.claimSubmit, { batchSize: 3 }, async (jobs) => {
+  await boss.work<SubmitJob>(Q.claimSubmit, { batchSize: 3 }, async (jobs: Job<SubmitJob>[]) => {
     for (const job of jobs) {
       await forOrg(job.data.orgId, 'claim.submit', (ctx) => submitClaimCommand(ctx, job.data.claimId, { acknowledgeWarnings: true }));
     }
   });
 
   // 999 / 277CA. Retries with growing delay until an ack arrives or we give up.
-  await boss.work<AckJob>(Q.claimAckFetch, { batchSize: 5 }, async (jobs) => {
+  await boss.work<AckJob>(Q.claimAckFetch, { batchSize: 5 }, async (jobs: Job<AckJob>[]) => {
     for (const job of jobs) {
       const { orgId, claimId, submissionId, connectorSubmissionId, attempt } = job.data;
       const done = await forOrg(orgId, 'claim.ack.fetch', async (ctx) => {
@@ -76,8 +76,28 @@ export async function registerClaimJobs(boss: PgBoss): Promise<void> {
     }
   });
 
+  // Bare accelerator: re-checks every still-outstanding submission right now instead
+  // of waiting out its backoff delay. The webhook route (apps/api) sends this the
+  // moment Stedi tells us a 999/277CA is ready; it is also harmless to run on its own
+  // schedule as a safety net, since fetchAcknowledgments is idempotent per submission.
+  await boss.work(Q.claimAckFetchSweep, { batchSize: 1 }, async () => {
+    for (const orgId of await listOrganizationIds()) {
+      await forOrg(orgId, 'claim.ack.fetch.sweep', async (ctx) => {
+        const outstanding = await ctx.tx
+          .select({ id: schema.claimSubmissions.id, claimId: schema.claimSubmissions.claimId, connectorSubmissionId: schema.claimSubmissions.connectorSubmissionId })
+          .from(schema.claimSubmissions)
+          .where(and(eq(schema.claimSubmissions.orgId, orgId), eq(schema.claimSubmissions.status, 'sent')));
+        for (const s of outstanding) {
+          if (!s.connectorSubmissionId) continue;
+          await boss.send(Q.claimAckFetch, { orgId, claimId: s.claimId, submissionId: s.id, connectorSubmissionId: s.connectorSubmissionId, attempt: 1 } satisfies AckJob, { singletonKey: `ack-sweep:${s.id}` });
+        }
+        if (outstanding.length) console.log(`[claims] ack sweep queued ${outstanding.length} outstanding submission(s) for org ${orgId}`);
+      });
+    }
+  });
+
   // 276/277 polling on a cadence learned from the payer, stopping on finalisation.
-  await boss.work<StatusJob>(Q.claimStatusPoll, { batchSize: 5 }, async (jobs) => {
+  await boss.work<StatusJob>(Q.claimStatusPoll, { batchSize: 5 }, async (jobs: Job<StatusJob>[]) => {
     for (const job of jobs) {
       const { orgId, claimId, attempt } = job.data;
       const next = await forOrg(orgId, 'claim.status.poll', async (ctx) => {
@@ -125,6 +145,44 @@ export async function registerClaimJobs(boss: PgBoss): Promise<void> {
         return attempt >= 8 ? null : days * 86_400;
       });
       if (next) await boss.send(Q.claimStatusPoll, { orgId, claimId, attempt: attempt + 1 } satisfies StatusJob, { startAfter: next, singletonKey: `status:${claimId}:${attempt + 1}` });
+    }
+  });
+
+  // Ready claims sit until an operator submits them, unless an org has opted into a
+  // daily auto-submit hour — checked hourly so a per-practice override of either the
+  // flag or the hour takes effect within 60 minutes rather than waiting for the next
+  // calendar day.
+  await boss.work(Q.claimAutoSubmitSweep, { batchSize: 1 }, async () => {
+    const hour = new Date().getUTCHours();
+    for (const orgId of await listOrganizationIds()) {
+      await forOrg(orgId, 'claim.auto-submit.sweep', async (ctx) => {
+        const ready = await ctx.tx
+          .select({ id: schema.claims.id, practiceId: schema.claims.practiceId })
+          .from(schema.claims)
+          .where(and(eq(schema.claims.orgId, orgId), eq(schema.claims.status, 'ready')));
+        if (ready.length === 0) return;
+
+        const byPractice = new Map<string, string[]>();
+        for (const c of ready) byPractice.set(c.practiceId, [...(byPractice.get(c.practiceId) ?? []), c.id]);
+
+        for (const [practiceId, claimIds] of byPractice) {
+          const gate = await automationGate(ctx, practiceId, 'autoSubmitReadyClaims');
+          if (!gate.allowed || gate.dryRun) continue;
+
+          const [settings] = await ctx.tx
+            .select({ hour: schema.automationSettings.autoSubmitHourUtc })
+            .from(schema.automationSettings)
+            .where(and(eq(schema.automationSettings.orgId, orgId), sql`(practice_id is null or practice_id = ${practiceId})`))
+            .orderBy(sql`practice_id nulls last`)
+            .limit(1);
+          if ((settings?.hour ?? -1) !== hour) continue;
+
+          for (const claimId of claimIds) {
+            await boss.send(Q.claimSubmit, { orgId, claimId } satisfies SubmitJob, { singletonKey: `autosubmit:${claimId}:${new Date().toISOString().slice(0, 10)}` });
+          }
+          console.log(`[claims] auto-submit sweep queued ${claimIds.length} ready claim(s) for org ${orgId} practice ${practiceId}`);
+        }
+      });
     }
   });
 

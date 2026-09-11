@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import type PgBoss from 'pg-boss';
+import type { Job, PgBoss } from 'pg-boss';
 import { decryptSecret } from '@grove/auth';
 import { and, eq, schema, sql } from '@grove/db';
 import { forOrg } from '../context';
@@ -12,7 +12,7 @@ interface DeliverJob { orgId: string; deliveryId: string }
 const RETRY_SECONDS = [10, 30, 60, 300, 900, 1800, 3600, 7200, 14400, 28800, 43200, 86400];
 
 export async function registerWebhookJobs(boss: PgBoss): Promise<void> {
-  await boss.work<DispatchJob>(Q.webhookDispatch, { batchSize: 10 }, async (jobs) => {
+  await boss.work<DispatchJob>(Q.webhookDispatch, { batchSize: 10 }, async (jobs: Job<DispatchJob>[]) => {
     for (const job of jobs) {
       const { orgId, eventId, eventType } = job.data;
       const deliveries = await forOrg(orgId, 'webhooks.dispatch', async (ctx) => {
@@ -31,7 +31,7 @@ export async function registerWebhookJobs(boss: PgBoss): Promise<void> {
     }
   });
 
-  await boss.work<DeliverJob>(Q.webhookDeliver, { batchSize: 5 }, async (jobs) => {
+  await boss.work<DeliverJob>(Q.webhookDeliver, { batchSize: 5 }, async (jobs: Job<DeliverJob>[]) => {
     for (const job of jobs) {
       const { orgId, deliveryId } = job.data;
       const retry = await forOrg(orgId, 'webhooks.deliver', async (ctx) => {

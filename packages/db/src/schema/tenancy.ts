@@ -52,6 +52,17 @@ export const practices = pgTable(
     taxId: text('tax_id'),
     taxIdType: text('tax_id_type').notNull().default('EI'), // EI = EIN, SY = SSN
     taxonomyCode: text('taxonomy_code'),
+    /** Required if the practice bills lab claims. */
+    cliaNumber: text('clia_number'),
+
+    /**
+     * EFT enrollment status — never the account/routing number itself. Real banking
+     * details belong in CAQH EnrollHub or the payer's own enrollment flow, not a
+     * second copy sitting in this database; this is only enough to check the box on
+     * the onboarding checklist. not_started | submitted | active.
+     */
+    eftEnrollmentStatus: text('eft_enrollment_status').notNull().default('not_started'),
+    eftBankName: text('eft_bank_name'),
 
     /**
      * Default place of service. Note: POS must reflect where the *patient* was, not
@@ -132,6 +143,14 @@ export const providers = pgTable(
     stateLicense: text('state_license'),
     licenseState: text('license_state'),
 
+    /** The payer-facing credentialing profile almost every commercial enrollment pulls from. */
+    caqhNumber: text('caqh_number'),
+    caqhAttestedAt: date('caqh_attested_at'),
+    boardCertifications: text('board_certifications').array().notNull().default([]),
+    malpracticeCarrier: text('malpractice_carrier'),
+    malpracticePolicyNumber: text('malpractice_policy_number'),
+    malpracticeExpiresOn: date('malpractice_expires_on'),
+
     active: boolean('active').notNull().default(true),
     ...timestamps,
   },
@@ -166,6 +185,16 @@ export const providerEnrollments = pgTable(
 
     /** participating | non_participating | pending | terminated */
     status: text('status').notNull().default('pending'),
+
+    /**
+     * ERA and EFT enrollment are linked by billing NPI but are their own approval
+     * steps with the payer, separate from claims (837) enrollment above — tracked
+     * separately because a practice can submit claims well before either clears.
+     * not_started | submitted | active, for both.
+     */
+    eraEnrollmentStatus: text('era_enrollment_status').notNull().default('not_started'),
+    eftEnrollmentStatus: text('eft_enrollment_status').notNull().default('not_started'),
+    tradingPartnerAgreementSignedOn: date('trading_partner_agreement_signed_on'),
 
     ...timestamps,
   },

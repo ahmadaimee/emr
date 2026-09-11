@@ -50,21 +50,22 @@ export async function checkSingleEligibility(formData: FormData) {
     // 2. Call clearinghouse
     const res = await ctx.clearinghouse.checkEligibility({
       traceNumber,
-      payer: { id: payer.payerIdentifier ?? 'MOCKPAYER', name: payer.name },
-      provider: { npi: provider?.npi ?? '1999999999' },
+      payer: { id: payer.payerIdCode ?? 'MOCKPAYER', name: payer.name },
+      provider: { isPerson: false, npi: provider?.npi ?? '1999999999' },
       subscriber: {
         memberId: coverage?.memberId ?? patient.mrn,
         person: {
           firstName: patient.firstName,
           lastName: patient.lastName,
-          dateOfBirth: patient.dateOfBirth,
-          sex: patient.sex,
         },
+        dateOfBirth: patient.dateOfBirth,
+        sex: patient.sex,
       },
+      serviceDate: new Date().toISOString().slice(0, 10),
       serviceTypeCodes: [serviceTypeCode],
     });
 
-    const status = res.parsed.active ? 'active' : 'inactive';
+    const status = res.parsed.isActive ? 'active' : 'inactive';
 
     // 3. Persist check
     const checkId = randomUUID();
@@ -93,10 +94,10 @@ export async function checkSingleEligibility(formData: FormData) {
         await ctx.tx.insert(schema.eligibilityBenefits).values({
           orgId: ctx.tenant.orgId,
           eligibilityCheckId: checkId,
-          benefitCode: b.benefitCode,
-          serviceTypeCode: b.serviceTypeCode ?? serviceTypeCode,
+          benefitCode: b.code,
+          serviceTypeCode: b.serviceTypeCodes[0] ?? serviceTypeCode,
           coverageLevel: b.coverageLevel,
-          insuranceTypeCode: b.insuranceTypeCode,
+          insuranceTypeCode: b.insuranceType,
           planDescription: b.planDescription,
           timePeriodQualifier: b.timePeriodQualifier,
           amountCents: b.amountCents,

@@ -146,7 +146,6 @@ export function HcfaFormViewer({
             rel="noopener noreferrer"
             className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-2.5 text-xs font-medium text-ink hover:bg-surface-sunken"
           >
-            <span>📄</span>
             <span>Download PDF</span>
           </a>
 
@@ -156,7 +155,6 @@ export function HcfaFormViewer({
             onClick={() => window.print()}
             className="inline-flex h-8 items-center gap-1.5 rounded-md bg-grove px-3 text-xs font-medium text-white hover:bg-grove-strong shadow-xs transition-colors"
           >
-            <span>🖨️</span>
             <span>Print Form</span>
           </button>
         </div>

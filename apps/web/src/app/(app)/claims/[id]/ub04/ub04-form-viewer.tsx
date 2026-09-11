@@ -81,7 +81,7 @@ export function Ub04FormViewer({ claimId, data }: { claimId: string; data: any }
             onClick={() => window.print()}
             className="inline-flex h-8 items-center gap-1.5 rounded-md bg-grove px-3 text-xs font-medium text-white hover:bg-grove-strong"
           >
-            🖨️ Print UB-04 / Export PDF
+            Print UB-04 / Export PDF
           </button>
         </div>
       </div>

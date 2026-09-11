@@ -12,12 +12,14 @@ export type ActivityVerb =
   | 'encounter.created' | 'charge.added'
   | 'claim.created' | 'claim.scrubbed' | 'claim.submitted' | 'claim.acknowledged' | 'claim.rejected'
   | 'claim.status_updated' | 'claim.paid' | 'claim.denied' | 'claim.corrected' | 'claim.voided'
-  | 'claim.secondary_generated' | 'claim.timely_filing_warning'
+  | 'claim.secondary_generated' | 'claim.timely_filing_warning' | 'claim.custom_status_changed'
+  | 'claim_custom_status.created' | 'claim_custom_status.retired'
   | 'remittance.received' | 'remittance.posted' | 'remittance.out_of_balance'
   | 'denial.created' | 'denial.assigned' | 'denial.resolved' | 'denial.appealed'
   | 'underpayment.detected'
+  | 'authorization.requested' | 'authorization.decided'
   | 'payment.received' | 'payment.applied' | 'payment.refunded'
-  | 'statement.sent' | 'statement.viewed' | 'statement.paid'
+  | 'statement.generated' | 'statement.sent' | 'statement.viewed' | 'statement.paid'
   | 'task.created' | 'task.assigned' | 'task.resolved'
   | 'automation.paused' | 'automation.resumed'
   | 'access.elevated' | 'access.elevation_ended';
@@ -25,7 +27,7 @@ export type ActivityVerb =
 export interface ActivityInput {
   orgId: string;
   practiceId?: string | null;
-  subjectType: 'patient' | 'claim' | 'encounter' | 'denial' | 'remittance' | 'eligibility_batch' | 'task' | 'statement' | 'organization';
+  subjectType: 'patient' | 'claim' | 'encounter' | 'denial' | 'remittance' | 'eligibility_batch' | 'task' | 'statement' | 'organization' | 'claim_custom_status';
   subjectId: string;
   verb: ActivityVerb;
   /** Rendered sentence, e.g. "submitted claim GRV-10041 to Aetna". */

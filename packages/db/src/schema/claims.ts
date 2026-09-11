@@ -53,6 +53,35 @@ export const claimStatus = pgEnum('claim_status', [
  */
 export const claimFrequency = pgEnum('claim_frequency', ['original', 'replacement', 'void']);
 
+/**
+ * Org-defined labels — "On Hold", "Credentialing", "Needs Coding Review" — layered on
+ * top of `claimStatus` rather than replacing it. `claimStatus` is the state machine
+ * real automation reads and writes (auto-submit, ack ingestion, remittance posting);
+ * a custom status is a sticky note a person can put on a claim and remove, and it
+ * carries no behavior of its own. Deliberately NOT an enum, because the whole point is
+ * that an admin adds one without a migration.
+ */
+export const claimCustomStatuses = pgTable(
+  'claim_custom_statuses',
+  {
+    id: primaryId,
+    orgId,
+    /** Null = available to every practice in the org. */
+    practiceId: uuid('practice_id'),
+    label: text('label').notNull(),
+    /** Tailwind-ish token or hex, rendered as a pill; the UI owns the palette. */
+    color: text('color').notNull().default('slate'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+    createdBy: uuid('created_by'),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('claim_custom_statuses_org_label_key').on(t.orgId, t.practiceId, t.label),
+    index('claim_custom_statuses_org_idx').on(t.orgId, t.practiceId, t.active),
+  ],
+);
+
 export const claims = pgTable(
   'claims',
   {
@@ -114,11 +143,27 @@ export const claims = pgTable(
     /** Set when the automation, not a person, created this claim. */
     createdByAutomation: text('created_by_automation'),
 
+    /** Advisory only — see `claimCustomStatuses`. Never read by automation or billing logic. */
+    customStatusId: uuid('custom_status_id'),
+
+    /** CMS-1500 box 23 / 837 REF*G1 — what actually goes on the wire. */
+    priorAuthNumber: text('prior_auth_number'),
+    /** The tracked request/response record this number came from, when Grove requested it. */
+    authorizationId: uuid('authorization_id'),
+
+    /**
+     * 837 CLM20 — justifies filing past the payer's timely filing window (e.g. `1`
+     * Proof of eligibility unknown, `9` Original claim rejected/denied for reasons
+     * unrelated to the claim). Omitted unless set; most claims file on time.
+     */
+    delayReasonCode: text('delay_reason_code'),
+
     ...timestamps,
   },
   (t) => [
     uniqueIndex('claims_org_number_key').on(t.orgId, t.claimNumber),
     index('claims_status_idx').on(t.orgId, t.practiceId, t.status),
+    index('claims_custom_status_idx').on(t.orgId, t.customStatusId),
     index('claims_patient_idx').on(t.orgId, t.patientId),
     index('claims_encounter_idx').on(t.orgId, t.encounterId),
     index('claims_payer_status_idx').on(t.orgId, t.payerId, t.status),

@@ -45,7 +45,7 @@ export function Kpi({
   label: string;
   value: ReactNode;
   hint?: ReactNode;
-  tone?: 'danger' | 'warn' | 'ok';
+  tone?: 'danger' | 'warn' | 'ok' | 'info';
   variant?: 'primary' | 'secondary';
   className?: string;
   badge?: string;
@@ -57,6 +57,8 @@ export function Kpi({
       ? 'text-warn'
       : tone === 'ok'
       ? 'text-ok'
+      : tone === 'info'
+      ? 'text-info'
       : 'text-ink';
 
   const isPrimary = variant === 'primary';
@@ -149,9 +151,9 @@ export function Empty({ title, body }: { title: string; body?: string }) {
   );
 }
 
-export function Card({ title, children, actions }: { title?: ReactNode; children: ReactNode; actions?: ReactNode }) {
+export function Card({ title, children, actions, className = '' }: { title?: ReactNode; children: ReactNode; actions?: ReactNode; className?: string }) {
   return (
-    <section className="rounded-lg border border-line bg-surface-raised shadow-sm">
+    <section className={`rounded-lg border border-line bg-surface-raised shadow-sm ${className}`}>
       {title ? (
         <header className="flex items-center justify-between border-b border-line px-4 py-2.5">
           <h2 className="text-sm font-semibold">{title}</h2>

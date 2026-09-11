@@ -27,6 +27,8 @@ interface AllocationRow {
   paidCents: number;
   contractualAdjustmentCents: number;
   patientResponsibilityCents: number;
+  /** CARC group PR reason — 1 Deductible, 2 Coinsurance, 3 Copayment. */
+  prReasonCode: '1' | '2' | '3';
 }
 
 export function PostInsurancePaymentModal({
@@ -75,6 +77,7 @@ export function PostInsurancePaymentModal({
         paidCents: paid,
         contractualAdjustmentCents: co45,
         patientResponsibilityCents: pr,
+        prReasonCode: '1',
       },
     ]);
   };
@@ -83,7 +86,7 @@ export function PostInsurancePaymentModal({
     setAllocations(allocations.filter((_, idx) => idx !== index));
   };
 
-  const handleUpdateAllocation = (index: number, field: keyof AllocationRow, value: number) => {
+  const handleUpdateAllocation = (index: number, field: 'paidCents' | 'contractualAdjustmentCents' | 'patientResponsibilityCents', value: number) => {
     setAllocations(
       allocations.map((a, idx) => {
         if (idx !== index) return a;
@@ -95,6 +98,10 @@ export function PostInsurancePaymentModal({
         return updated;
       })
     );
+  };
+
+  const handleUpdatePrReason = (index: number, prReasonCode: AllocationRow['prReasonCode']) => {
+    setAllocations(allocations.map((a, idx) => (idx === index ? { ...a, prReasonCode } : a)));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,7 +126,7 @@ export function PostInsurancePaymentModal({
     setError(null);
     setLoading(true);
     try {
-      await recordInsurancePaymentAction({
+      const res = await recordInsurancePaymentAction({
         payerId,
         payerName: selectedPayer?.name || 'Insurance Payer',
         paymentType,
@@ -128,6 +135,10 @@ export function PostInsurancePaymentModal({
         totalPaidCents: checkTotalCents,
         allocations,
       });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
       setOpen(false);
       setTraceNumber('');
       setCheckTotalDollars('');
@@ -146,7 +157,6 @@ export function PostInsurancePaymentModal({
         onClick={() => setOpen(true)}
         className="inline-flex h-8 items-center gap-1.5 rounded-md bg-grove px-3 text-xs font-medium text-white hover:bg-grove-strong transition-colors shadow-xs"
       >
-        <span>🏦</span>
         <span>Post Insurance Check / EOB</span>
       </button>
 
@@ -288,6 +298,7 @@ export function PostInsurancePaymentModal({
                           <th className="py-1.5 px-2 text-right">Paid ($)</th>
                           <th className="py-1.5 px-2 text-right">CO-45 (Write-off)</th>
                           <th className="py-1.5 px-2 text-right">PR (Patient Bal)</th>
+                          <th className="py-1.5 px-2">PR Reason</th>
                           <th className="py-1.5 px-1 text-center">Action</th>
                         </tr>
                       </thead>
@@ -333,6 +344,17 @@ export function PostInsurancePaymentModal({
                                 }
                                 className="w-20 h-6 text-right font-mono rounded border border-line bg-surface px-1 text-xs text-warn"
                               />
+                            </td>
+                            <td className="py-2 px-2">
+                              <select
+                                value={a.prReasonCode}
+                                onChange={(e) => handleUpdatePrReason(idx, e.target.value as AllocationRow['prReasonCode'])}
+                                className="h-6 rounded border border-line bg-surface px-1 text-[11px] text-ink"
+                              >
+                                <option value="1">PR-1 Deductible</option>
+                                <option value="2">PR-2 Coinsurance</option>
+                                <option value="3">PR-3 Copayment</option>
+                              </select>
                             </td>
                             <td className="py-2 px-1 text-center">
                               <button

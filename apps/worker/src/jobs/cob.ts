@@ -1,4 +1,4 @@
-import type PgBoss from 'pg-boss';
+import type { Job, PgBoss } from 'pg-boss';
 import { and, eq, schema, sql } from '@grove/db';
 import { generateSecondaryClaimCommand } from '@grove/domain';
 import { automationGate, forOrg } from '../context';
@@ -8,7 +8,7 @@ interface SecondaryJob { orgId: string; primaryClaimId: string; remittanceClaimI
 interface CrossoverJob { orgId: string; primaryClaimId: string; secondaryCoverageId: string }
 
 export async function registerCobJobs(boss: PgBoss): Promise<void> {
-  await boss.work<SecondaryJob>(Q.cobGenerateSecondary, { batchSize: 3 }, async (jobs) => {
+  await boss.work<SecondaryJob>(Q.cobGenerateSecondary, { batchSize: 3 }, async (jobs: Job<SecondaryJob>[]) => {
     for (const job of jobs) {
       const { orgId, primaryClaimId, remittanceClaimId, secondaryCoverageId } = job.data;
       await forOrg(orgId, 'cob.generate-secondary', async (ctx) => {
@@ -27,7 +27,7 @@ export async function registerCobJobs(boss: PgBoss): Promise<void> {
 
   // The primary said it crossed the claim over. If no secondary remittance has arrived
   // by now, the crossover did not happen and we file our own secondary.
-  await boss.work<CrossoverJob>(Q.cobCrossoverWait, { batchSize: 3 }, async (jobs) => {
+  await boss.work<CrossoverJob>(Q.cobCrossoverWait, { batchSize: 3 }, async (jobs: Job<CrossoverJob>[]) => {
     for (const job of jobs) {
       const { orgId, primaryClaimId, secondaryCoverageId } = job.data;
       await forOrg(orgId, 'cob.crossover-wait', async (ctx) => {

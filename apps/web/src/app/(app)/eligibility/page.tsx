@@ -136,7 +136,7 @@ export default async function EligibilityPage() {
                     <tr key={b.id}>
                       <td className="px-3 py-2.5 font-medium">{b.name}</td>
                       <td className="px-3 py-2.5 text-xs text-ink-3 capitalize">{b.sourceType.replace('_', ' ')}</td>
-                      <td className="px-3 py-2.5 text-right g-num">{b.totalRequests ?? 0}</td>
+                      <td className="px-3 py-2.5 text-right g-num">{b.totalCount ?? 0}</td>
                       <td className="px-3 py-2.5 text-right g-num text-ok">{b.activeCount ?? 0}</td>
                       <td className="px-3 py-2.5 text-right g-num text-danger">{b.inactiveCount ?? 0}</td>
                       <td className="px-3 py-2.5">

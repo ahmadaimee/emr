@@ -1,4 +1,4 @@
-import type PgBoss from 'pg-boss';
+import type { Job, PgBoss } from 'pg-boss';
 import { and, eq, listOrganizationIds, schema, sql } from '@grove/db';
 import { DomainError, postRemittanceCommand } from '@grove/domain';
 import { parse835, splitTransactionSets, tokenize } from '@grove/x12';
@@ -25,7 +25,7 @@ export async function registerRemittanceJobs(boss: PgBoss): Promise<void> {
     }
   });
 
-  await boss.work<PostJob>(Q.eraPost, { batchSize: 1 }, async ([job]) => {
+  await boss.work<PostJob>(Q.eraPost, { batchSize: 1 }, async ([job]: Job<PostJob>[]) => {
     if (!job) return;
     const { orgId, fileId, raw835, fileName } = job.data;
     const sets = splitTransactionSets(tokenize(raw835));

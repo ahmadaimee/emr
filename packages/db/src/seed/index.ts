@@ -177,12 +177,13 @@ async function main() {
       await tx`insert into user_practice_access (org_id, user_id, practice_id) values (${ORG_ID}, ${admin}, ${northside}), (${ORG_ID}, ${admin}, ${eastgate})`;
 
       // ----- Work queues & automation defaults ----------------------------
-      const queues = [
+      const queues: [string, string, string][] = [
         ['denials', 'Denials', 'denial'], ['rejections', 'Clearinghouse Rejections', 'rejection'],
         ['eligibility', 'Eligibility Exceptions', 'eligibility'], ['underpayments', 'Underpayments', 'underpayment'],
         ['timely-filing', 'Timely Filing at Risk', 'timely_filing'], ['coding', 'Coding Review', 'coding'],
         ['secondary-review', 'Secondary Claims Review', 'general'], ['patient-balances', 'Patient Balances', 'patient'],
         ['duplicates', 'Possible Duplicate Patients', 'general'], ['out-of-balance', 'Out-of-Balance Remittances', 'general'],
+        ['authorizations', 'Prior Authorizations', 'authorization'],
       ];
       for (const [key, name, category] of queues) {
         await tx`insert into work_queues (org_id, key, name, category, is_system) values (${ORG_ID}, ${key}, ${name}, ${category}, true)`;
@@ -207,7 +208,7 @@ async function main() {
       `;
     });
 
-    console.log('✓ Seeded: 1 org, 2 practices, 3 providers, 4 payers, 6 patients, 6 roles, 10 work queues');
+    console.log('✓ Seeded: 1 org, 2 practices, 3 providers, 4 payers, 6 patients, 6 roles, 11 work queues');
     console.log('  Admin login: admin@orchard.local (set password via invite)');
   } finally {
     await sql.end();

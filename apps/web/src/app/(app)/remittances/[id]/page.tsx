@@ -231,9 +231,9 @@ export default async function RemittanceDetailPage({
                     <td className="px-3 py-2 font-mono text-xs">{p.providerIdentifier || '—'}</td>
                     <td className="px-3 py-2 text-xs">{date(p.fiscalPeriodDate)}</td>
                     <td className="px-3 py-2 font-mono text-xs font-medium">{p.adjustmentReasonCode}</td>
-                    <td className="px-3 py-2 text-xs text-ink-3">{p.adjustmentIdentifier || '—'}</td>
+                    <td className="px-3 py-2 text-xs text-ink-3">{p.referenceIdentifier || '—'}</td>
                     <td className="px-3 py-2 text-right g-num font-medium">
-                      <Money cents={p.adjustmentAmountCents} />
+                      <Money cents={p.amountCents} />
                     </td>
                   </tr>
                 ))}

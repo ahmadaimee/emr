@@ -124,7 +124,6 @@ export function TaskRow({ task }: TaskRowProps) {
                 className="h-7 px-2.5 text-xs whitespace-nowrap shrink-0 inline-flex items-center gap-1.5 shadow-xs"
                 title="Auto-Fix Denial & Resubmit (Type 7 Replacement Claim with Payer ICN)"
               >
-                <span>⚡</span>
                 <span>
                   {task.title.toLowerCase().includes('denial') || task.suggestedAction.toLowerCase().includes('resubmit')
                     ? 'Auto-Fix Denial & Resubmit'

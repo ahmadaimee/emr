@@ -11,7 +11,7 @@ export function AutoDenialBotButton() {
     setResult(null);
     setTimeout(() => {
       setRunning(false);
-      setResult('⚡ Autonomous Denial Bot executed: 3 simple denials auto-corrected (Modifier 95 appended, original ICN attached, converted to Frequency 7 Replacement Claim) and transmitted to clearinghouse.');
+      setResult('Autonomous Denial Bot executed: 3 simple denials auto-corrected (Modifier 95 appended, original ICN attached, converted to Frequency 7 Replacement Claim) and transmitted to clearinghouse.');
       setTimeout(() => setResult(null), 7000);
     }, 1200);
   };
@@ -28,7 +28,6 @@ export function AutoDenialBotButton() {
         disabled={running}
         className="inline-flex h-8 items-center gap-1.5 rounded-md bg-grove px-3 text-xs font-medium text-white hover:bg-grove-strong transition-colors shadow-xs disabled:opacity-50"
       >
-        <span>⚡</span>
         <span>{running ? 'Running Bot…' : 'Run Autonomous Denial Bot'}</span>
       </button>
     </div>

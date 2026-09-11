@@ -194,7 +194,7 @@ export function CollectPaymentModal({ patients }: { patients: PatientOption[] })
                       onClick={() => setIsSearching(true)}
                       className="text-xs font-medium text-grove hover:underline"
                     >
-                      🔍 Search / Change Patient
+                      Search / Change Patient
                     </button>
                   )}
                 </div>
@@ -231,9 +231,8 @@ export function CollectPaymentModal({ patients }: { patients: PatientOption[] })
                             }}
                             placeholder={currentPlaceholder}
                             autoFocus
-                            className="h-9 w-full rounded-md border border-line-strong bg-surface pl-8 pr-8 text-xs text-ink placeholder:text-ink-4 focus:border-grove"
+                            className="h-9 w-full rounded-md border border-line-strong bg-surface pl-3 pr-8 text-xs text-ink placeholder:text-ink-4 focus:border-grove"
                           />
-                          <span className="absolute left-2.5 top-2.5 text-xs text-ink-4">🔍</span>
                           {searchQuery && (
                             <button
                               type="button"
@@ -298,7 +297,7 @@ export function CollectPaymentModal({ patients }: { patients: PatientOption[] })
                     <div className="max-h-48 overflow-y-auto space-y-1.5 pt-1">
                       {!hasSearched ? (
                         <div className="p-3 text-center text-xs text-ink-3 border border-dashed border-line rounded bg-surface">
-                          <div className="font-semibold text-ink text-xs mb-0.5">⚡ Fast 10k+ Patient Lookup</div>
+                          <div className="font-semibold text-ink text-xs mb-0.5">Fast 10k+ patient lookup</div>
                           <div>Type patient name, DOB, or MRN and click <strong className="text-ink">Search</strong> or press <strong className="text-ink">Enter</strong>.</div>
                         </div>
                       ) : totalFoundCount === 0 ? (
@@ -341,14 +340,14 @@ export function CollectPaymentModal({ patients }: { patients: PatientOption[] })
                                 </div>
 
                                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-ink-3">
-                                  {p.dob ? <span>🎂 DOB: {p.dob}</span> : null}
+                                  {p.dob ? <span>DOB: {p.dob}</span> : null}
                                   {p.subscriberId ? (
                                     <span className="font-mono">
-                                      💳 Sub ID: {p.subscriberId} {p.payerName ? `(${p.payerName})` : ''}
+                                      Sub ID: {p.subscriberId} {p.payerName ? `(${p.payerName})` : ''}
                                     </span>
                                   ) : null}
-                                  {p.ssnLast4 ? <span>🔒 SSN: ***-**-{p.ssnLast4}</span> : null}
-                                  {p.phone ? <span>📞 {p.phone}</span> : null}
+                                  {p.ssnLast4 ? <span>SSN: ***-**-{p.ssnLast4}</span> : null}
+                                  {p.phone ? <span>Phone: {p.phone}</span> : null}
                                 </div>
                               </div>
 
@@ -385,12 +384,12 @@ export function CollectPaymentModal({ patients }: { patients: PatientOption[] })
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-ink-3 pt-1">
-                          {selectedPatient.dob ? <div>🎂 DOB: <strong className="text-ink">{selectedPatient.dob}</strong></div> : null}
-                          {selectedPatient.phone ? <div>📞 <strong className="text-ink">{selectedPatient.phone}</strong></div> : null}
-                          {selectedPatient.ssnLast4 ? <div>🔒 SSN: <strong className="text-ink">***-**-{selectedPatient.ssnLast4}</strong></div> : null}
+                          {selectedPatient.dob ? <div>DOB: <strong className="text-ink">{selectedPatient.dob}</strong></div> : null}
+                          {selectedPatient.phone ? <div>Phone: <strong className="text-ink">{selectedPatient.phone}</strong></div> : null}
+                          {selectedPatient.ssnLast4 ? <div>SSN: <strong className="text-ink">***-**-{selectedPatient.ssnLast4}</strong></div> : null}
                           {selectedPatient.subscriberId ? (
                             <div className="col-span-2">
-                              💳 Sub ID: <strong className="font-mono text-ink">{selectedPatient.subscriberId}</strong>
+                              Sub ID: <strong className="font-mono text-ink">{selectedPatient.subscriberId}</strong>
                               {selectedPatient.payerName ? ` · ${selectedPatient.payerName}` : ''}
                             </div>
                           ) : null}

@@ -3,6 +3,7 @@ import { appendAuditEvent } from '@grove/audit';
 import { assembleProfessionalClaim, loadClaimAssembly } from '@grove/domain';
 import { claimToCms1500, renderCms1500 } from '@grove/forms';
 import { pageContext } from '@/lib/session';
+import { getMockClaimDetail } from '@/lib/mock-data';
 
 export async function GET(
   _request: Request,
@@ -19,7 +20,7 @@ export async function GET(
       return null;
     }
 
-    phi.touch([a.patient.id], ['demographics', 'financial', 'medical']);
+    phi.touch([a.patient.id], ['demographics', 'financial', 'clinical']);
     phi.markExport();
 
     const pClaim = assembleProfessionalClaim(a);

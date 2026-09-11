@@ -28,7 +28,6 @@ export function InquireStatusModal() {
         onClick={() => setOpen(true)}
         className="inline-flex h-8 items-center gap-1.5 rounded-md bg-grove px-3 text-xs font-medium text-white hover:bg-grove-strong transition-colors shadow-xs"
       >
-        <span>🔍</span>
         <span>Run Real-Time 276 Inquiry</span>
       </button>
 

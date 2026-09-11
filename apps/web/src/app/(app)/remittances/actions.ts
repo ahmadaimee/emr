@@ -37,12 +37,12 @@ export async function postRemittance(remittanceId: string) {
     for (const rc of rClaims) {
       await ctx.tx
         .update(schema.remittanceClaims)
-        .set({ status: 'posted', postedAt: new Date(), updatedAt: new Date() })
+        .set({ postedAt: new Date(), updatedAt: new Date() })
         .where(eq(schema.remittanceClaims.id, rc.id));
 
       if (rc.claimId) {
         // Update claim balance and status based on payment and patient responsibility
-        const isPaidInFull = (rc.paidCents ?? 0) >= (rc.totalChargeCents ?? 0);
+        const isPaidInFull = (rc.totalPaidCents ?? 0) >= (rc.totalChargeCents ?? 0);
         const newStatus = isPaidInFull
           ? 'paid'
           : (rc.patientResponsibilityCents ?? 0) > 0
@@ -53,9 +53,9 @@ export async function postRemittance(remittanceId: string) {
           .update(schema.claims)
           .set({
             status: newStatus,
-            paidAmountCents: sql`coalesce(paid_amount_cents, 0) + ${rc.paidCents ?? 0}`,
+            totalPaidCents: sql`coalesce(total_paid_cents, 0) + ${rc.totalPaidCents ?? 0}`,
             patientResponsibilityCents: rc.patientResponsibilityCents ?? 0,
-            balanceCents: sql`greatest(0, coalesce(balance_cents, total_charge_cents) - ${rc.paidCents ?? 0})`,
+            balanceCents: sql`greatest(0, coalesce(balance_cents, total_charge_cents) - ${rc.totalPaidCents ?? 0})`,
             updatedAt: new Date(),
           })
           .where(eq(schema.claims.id, rc.claimId));

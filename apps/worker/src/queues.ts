@@ -17,8 +17,12 @@ export const Q = {
 
   claimSubmit: 'claim.submit',
   claimAckFetch: 'claim.ack.fetch',
+  claimAckFetchSweep: 'claim.ack.fetch.sweep',
   claimStatusPoll: 'claim.status.poll',
   claimTimelyFilingSweep: 'claim.timely-filing.sweep',
+  claimAutoSubmitSweep: 'claim.auto-submit.sweep',
+
+  authorizationOverdueSweep: 'authorization.overdue.sweep',
 
   eraFetch: 'era.fetch',
   eraPost: 'era.post',

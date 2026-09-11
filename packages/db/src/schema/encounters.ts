@@ -70,6 +70,17 @@ export const encounters = pgTable(
     hospitalizedFrom: date('hospitalized_from'),
     hospitalizedTo: date('hospitalized_to'),
 
+    /** CMS-1500 box 16 — dates the patient was unable to work in their current occupation. */
+    disabilityFrom: date('disability_from'),
+    disabilityTo: date('disability_to'),
+
+    /** CMS-1500 box 20 — an outside (non-billing-provider) lab performed a service on this claim. */
+    outsideLabPerformed: boolean('outside_lab_performed').notNull().default(false),
+    outsideLabChargesCents: money('outside_lab_charges_cents'),
+
+    /** CMS-1500 box 19 — free-text additional claim information (NTE), payer-specific instructions. */
+    additionalClaimInfo: text('additional_claim_info'),
+
     priorAuthorizationNumber: text('prior_authorization_number'),
     referralNumber: text('referral_number'),
     clia: text('clia_number'),

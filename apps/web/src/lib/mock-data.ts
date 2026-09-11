@@ -1,5 +1,5 @@
 /**
- * Grove Demo / Synthetic Data Provider
+ * PracticeOS Demo / Synthetic Data Provider
  *
  * Provides realistic, Synthea-derived synthetic healthcare and RCM data
  * for interactive exploration of all web operator UI routes when PostgreSQL
@@ -23,10 +23,9 @@ export const DEMO_SESSION = {
   },
   actor: {
     userId: MOCK_USER_ID,
-    email: 'operator@grove.internal',
-    roles: ['admin', 'biller', 'operator'],
-    practiceIds: null,
-    scopes: ['*'],
+    orgId: MOCK_ORG_ID,
+    grants: [{ resource: '*', action: '*' }],
+    practiceIds: [],
     elevation: null,
   },
   sessionId: 'demo_session_live',
@@ -53,7 +52,7 @@ export function getMockDashboardData() {
       { key: 'timely_filing', name: 'Timely filing within 14 days', category: 'timely_filing', open: '5', urgent: '5', amount: '320000' },
     ],
     activity: [
-      { id: 'act-1', actorType: 'system', actorLabel: 'Grove Autopilot', summary: 're-submitted Claim #CLM-2026-0101 with corrected billing provider NPI', occurredAt: new Date(Date.now() - 1000 * 60 * 12), verb: 'claim.resubmitted', subjectType: 'claim', subjectId: 'clm-demo-1' },
+      { id: 'act-1', actorType: 'system', actorLabel: 'PracticeOS Autopilot', summary: 're-submitted Claim #CLM-2026-0101 with corrected billing provider NPI', occurredAt: new Date(Date.now() - 1000 * 60 * 12), verb: 'claim.resubmitted', subjectType: 'claim', subjectId: 'clm-demo-1' },
       { id: 'act-2', actorType: 'user', actorLabel: 'Sarah Jenkins', summary: 'appealed denial PR-204 on Claim #CLM-2026-0098', occurredAt: new Date(Date.now() - 1000 * 60 * 35), verb: 'claim.appealed', subjectType: 'claim', subjectId: 'clm-demo-1' },
       { id: 'act-3', actorType: 'system', actorLabel: 'ERA Ingestion', summary: 'balanced 835 check #CHK-88912 ($14,250.00 from Aetna)', occurredAt: new Date(Date.now() - 1000 * 60 * 80), verb: 'remittance.balanced', subjectType: 'remittance', subjectId: 'remit-demo-1' },
       { id: 'act-4', actorType: 'user', actorLabel: 'Alex Morgan', summary: 'verified eligibility for Eleanor Miller (BCBS)', occurredAt: new Date(Date.now() - 1000 * 60 * 110), verb: 'patient.verified', subjectType: 'patient', subjectId: 'pat-1' },
@@ -476,7 +475,7 @@ export function getMockClaimDetail(id: string) {
         id: 'aud-4',
         action: 'phi.access',
         actorType: 'system',
-        actorName: 'Grove Autopilot',
+        actorName: 'PracticeOS Autopilot',
         ipAddress: '127.0.0.1',
         sessionId: 'sys_autopilot_daemon',
         occurredAt: new Date(Date.now() - 1000 * 60 * 45),
@@ -517,7 +516,7 @@ export function getMockClaimDetail(id: string) {
         label: 'Service Line 1 Procedure Modifier',
         oldValue: 'None',
         newValue: '25 (Significant, Separately Identifiable E/M)',
-        author: 'Grove Autopilot',
+        author: 'PracticeOS Autopilot',
         authorRole: 'Autonomous Rules Engine',
         changedAt: new Date(Date.now() - 86400000 * 1 + 600000),
         reason: 'Auto-applied recommended NCCI modifier fix.',
@@ -722,7 +721,7 @@ const GLOBAL_WORK_QUEUE_TASKS: any[] = [
       status: 'resolved',
       title: 'Appended modifier 25 to CPT 99214 and re-filed claim #CLM-2026-0098',
       detail: { reason: 'Corrected claim accepted by BCBS with ICN #8891204', payer: 'Blue Cross Blue Shield' },
-      suggestedAction: 'Completed by Grove Autopilot',
+      suggestedAction: 'Completed by PracticeOS Autopilot',
       createdAt: new Date(Date.now() - 86400000 * 1),
       dueAt: null,
     },
@@ -1252,6 +1251,7 @@ export function getMockPatientDetail(id: string) {
       { id: 'pyr-4', name: 'Cigna' },
     ],
     soapNotes: getPatientSoapNotes(id),
+    signerName: 'Dr. Marcus Vance, MD',
     medicalHistory: {
       conditions: [
         { id: 'c-1', condition: 'Essential Hypertension', icd10: 'I10', onsetYear: '2020', status: 'active', notes: 'Well controlled on Lisinopril' },
@@ -1291,38 +1291,26 @@ export function getMockPatientDetail(id: string) {
 const INITIAL_SOAP_NOTES: any[] = [
   {
     id: 'soap-1',
-    encounterDate: '2026-03-01',
-    providerName: 'Dr. Marcus Vance, MD',
-    providerNpi: '1487654323',
-    status: 'signed_and_locked',
+    serviceDate: '2026-03-01',
+    authorName: 'Dr. Marcus Vance, MD',
+    status: 'signed',
     signedAt: new Date(Date.now() - 86400000 * 2 + 7200000),
     vitals: {
       bloodPressure: '122/78 mmHg',
       heartRate: '72 bpm',
       temperature: '98.4 °F',
       respiratoryRate: '16 /min',
-      spo2: '99% on room air',
+      spo2: '99%',
       weightLbs: '142 lbs',
       heightInches: '65 in',
-      bmi: '23.6',
     },
-    subjective: {
-      chiefComplaint: 'Acute low back pain radiating to left buttock for 4 days after lifting garden soil.',
-      hpi: 'Patient is a 43-year-old female presenting with sharp, aching low back pain (severity 6/10) that started 4 days ago. Pain worsens with prolonged sitting and forward bending. Relieved by lying flat with knees elevated. No numbness, tingling, or lower extremity weakness. No bowel or bladder dysfunction (red flags negative).',
-      ros: 'Constitutional: No fevers, chills, or unexplained weight loss. Musculoskeletal: Positive for lumbar spine stiffness. Neurological: Negative for paresthesias or weakness.',
-    },
-    objective: {
-      exam: 'Patient appears in mild distress when transitioning from seated to standing position. Normal gait. Lumbar spine demonstrates tenderness to palpation over L4-L5 paraspinal musculature. Range of motion: flexion limited to 60 degrees secondary to pain. Straight leg raise (SLR) negative bilaterally. Deep tendon reflexes: Patellar 2+ bilaterally, Achilles 2+ bilaterally. Sensation to light touch intact in L3-S1 dermatomes bilaterally.',
-    },
-    assessment: [
-      { icd10: 'M54.5', description: 'Low back pain, unspecified', status: 'primary' },
-      { icd10: 'M25.561', description: 'Pain in right knee, unspecified', status: 'secondary' },
-    ],
-    plan: {
-      medications: 'Prescribed Cyclobenzaprine 5mg PO TID PRN muscle spasm (#15, no refills); Naproxen 500mg PO BID with food for 7 days.',
-      orders: 'Order lumbar spine plain radiographs 2-views to evaluate alignment and disc spaces. Physical therapy referral: Lumbar stabilization exercises 2x/week for 6 weeks.',
-      instructions: 'Advised patient on core ergonomics, avoiding heavy lifting (>15 lbs), alternating heat/ice 20 mins every 3 hours. Return to clinic in 3 weeks or immediately if numbness, foot drop, or urinary changes develop.',
-    },
+    subjective:
+      'Acute low back pain radiating to left buttock for 4 days after lifting garden soil. Patient is a 43-year-old female presenting with sharp, aching low back pain (severity 6/10). Pain worsens with prolonged sitting and forward bending, relieved by lying flat with knees elevated. No numbness, tingling, or lower extremity weakness.',
+    objective:
+      'Patient appears in mild distress when transitioning from seated to standing position. Normal gait. Lumbar spine demonstrates tenderness to palpation over L4-L5 paraspinal musculature. Range of motion: flexion limited to 60 degrees secondary to pain. Straight leg raise (SLR) negative bilaterally.',
+    primaryDiagnosisCode: 'M54.5',
+    primaryDiagnosisDescription: 'Low back pain, unspecified',
+    plan: 'Prescribed Cyclobenzaprine 5mg PO TID PRN muscle spasm (#15, no refills); Naproxen 500mg PO BID with food for 7 days. Order lumbar spine plain radiographs. Physical therapy referral: lumbar stabilization exercises 2x/week for 6 weeks. Return to clinic in 3 weeks.',
   },
 ];
 
@@ -1751,7 +1739,7 @@ export function getMockAuditData() {
       resourceId: 'pat-1',
       actorType: 'system',
       actorUserId: null,
-      actorLabel: 'Grove Autopilot',
+      actorLabel: 'PracticeOS Autopilot',
       ipAddress: null,
       hash: 'f2d1e0c9b8a7f6e5d4c3b2a10987654321fedcba0987654321fedcba09876543',
     },
@@ -2691,7 +2679,7 @@ const GLOBAL_CLAIM_NOTES: Record<string, any[]> = {
     {
       id: 'cn-3',
       category: 'Denial Follow-up',
-      author: 'Grove Autopilot',
+      author: 'PracticeOS Autopilot',
       authorRole: 'Autonomous RCM Engine',
       content: 'Electronic 835 Remittance parsed with Claim Adjustment Reason Code CO-96. CPT 99214 was billed with CPT 73030 without modifier 25. Generated corrected claim Type 7 with modifier 25 appended.',
       createdAt: new Date(Date.now() - 86400000 * 1),
@@ -2771,7 +2759,7 @@ const GLOBAL_CLAIM_ALERTS: Record<string, any> = {
     claimId: 'clm-demo-1',
     text: 'URGENT: Claim denied under CO-96. Payer timely filing window closes on 03/25/2026. Submit corrected claim (Frequency 7) or appeal with clinical chart notes.',
     severity: 'danger',
-    setBy: 'Grove Autopilot Scrubber',
+    setBy: 'PracticeOS Autopilot Scrubber',
     setDate: '2026-03-06',
   },
 };

@@ -103,6 +103,10 @@ export const automationSettings = pgTable(
     autoEligibilityMonthly: boolean('auto_eligibility_monthly').notNull().default(true),
 
     autoClaimStatus: boolean('auto_claim_status').notNull().default(true),
+    /** Submit every "ready" claim automatically at `autoSubmitHourUtc`, no human touch. */
+    autoSubmitReadyClaims: boolean('auto_submit_ready_claims').notNull().default(false),
+    /** 0-23. Default is 13 (09:00 US/Eastern) to land submissions early in a payer's business day. */
+    autoSubmitHourUtc: integer('auto_submit_hour_utc').notNull().default(13),
     autoSecondaryClaims: boolean('auto_secondary_claims').notNull().default(true),
     /** Submit auto-generated secondaries without review when they scrub clean. */
     autoSubmitSecondary: boolean('auto_submit_secondary').notNull().default(false),
@@ -283,7 +287,8 @@ export const documents = pgTable(
     sha256: text('sha256').notNull(),
     /**
      * x12_837 | x12_835 | x12_271 | x12_277 | pdf_cms1500 | pdf_ub04 | eob_scan |
-     * medical_record | statement | correspondence | appeal | insurance_card
+     * medical_record | statement | correspondence | appeal | insurance_card |
+     * baa | w9 | caqh_attestation | malpractice_certificate | board_certification
      */
     kind: text('kind').notNull(),
     /** Retention class drives the archival job. */
@@ -309,12 +314,15 @@ export const documentLinks = pgTable(
     denialId: uuid('denial_id'),
     taskId: uuid('task_id'),
     statementId: uuid('statement_id'),
+    /** Credentialing documents (CAQH attestation, malpractice certificate, board cert) belong to a provider, not a patient. */
+    providerId: uuid('provider_id'),
     ...timestamps,
   },
   (t) => [
     index('document_links_document_idx').on(t.documentId),
     index('document_links_patient_idx').on(t.orgId, t.patientId),
     index('document_links_claim_idx').on(t.orgId, t.claimId),
+    index('document_links_provider_idx').on(t.orgId, t.providerId),
   ],
 );
 

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { eq, gt, schema } from '@grove/db';
 import { Card, Empty, Kpi, Money, PageHeader, StatusPill } from '@/components/ui';
 import { date, relative } from '@/lib/format';
 import { pageContext } from '@/lib/session';
@@ -18,6 +19,30 @@ export default async function PaymentsPage({
   const { run } = await pageContext();
 
   const data = await run('/payments', async (ctx) => {
+    const payers = await ctx.tx
+      .select({ id: schema.payers.id, name: schema.payers.name, payerId: schema.payers.payerIdCode })
+      .from(schema.payers)
+      .orderBy(schema.payers.name)
+      .limit(200);
+
+    // Claims still carrying an insurance balance — the pool a payer check can be posted against.
+    const openClaimRows = await ctx.tx
+      .select({
+        id: schema.claims.id,
+        claimNumber: schema.claims.claimNumber,
+        billedCents: schema.claims.totalChargeCents,
+        patientFirst: schema.patients.firstName,
+        patientLast: schema.patients.lastName,
+        mrn: schema.patients.mrn,
+        payerName: schema.payers.name,
+      })
+      .from(schema.claims)
+      .innerJoin(schema.patients, eq(schema.patients.id, schema.claims.patientId))
+      .innerJoin(schema.payers, eq(schema.payers.id, schema.claims.payerId))
+      .where(gt(schema.claims.balanceCents, 0))
+      .orderBy(schema.claims.createdAt)
+      .limit(200);
+
     return {
       summary: {
         totalCollectedTodayCents: 245000,
@@ -31,8 +56,15 @@ export default async function PaymentsPage({
       payments: [],
       insurancePayments: [],
       patients: [],
-      payers: [],
-      openClaims: [],
+      payers: payers.map((p) => ({ id: p.id, name: p.name, payerId: p.payerId ?? '' })),
+      openClaims: openClaimRows.map((c) => ({
+        id: c.id,
+        claimNumber: c.claimNumber,
+        patientName: `${c.patientLast}, ${c.patientFirst}`,
+        mrn: c.mrn,
+        billedCents: c.billedCents,
+        payerName: c.payerName,
+      })),
     };
   });
 
@@ -82,7 +114,6 @@ export default async function PaymentsPage({
                 : 'bg-surface-raised text-ink-2 hover:bg-surface-sunken border border-line'
             }`}
           >
-            <span>👤</span>
             <span>Patient Payments & Copays</span>
             <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${currentView === 'patient' ? 'bg-white/20 text-white' : 'bg-surface-sunken text-ink-3'}`}>
               {payments.length}
@@ -97,7 +128,6 @@ export default async function PaymentsPage({
                 : 'bg-surface-raised text-ink-2 hover:bg-surface-sunken border border-line'
             }`}
           >
-            <span>🏦</span>
             <span>Insurance Payer Remittances (EOB)</span>
             <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono ${currentView === 'insurance' ? 'bg-white/20 text-white' : 'bg-surface-sunken text-ink-3'}`}>
               {insurancePayments.length}
