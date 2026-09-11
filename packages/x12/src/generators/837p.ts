@@ -223,6 +223,8 @@ function claimSegments(c: ProfessionalClaim): Segment[] {
       c.releaseOfInformation,
       '',
       relatedCauses(c),
+      '', '', '', '', '', '', '', '',
+      c.delayReasonCode ?? '',
     ),
   );
 

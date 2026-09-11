@@ -154,6 +154,12 @@ export interface ProfessionalClaim {
   frequencyCode: '1' | '7' | '8';
   /** REF*F8 — required for frequency 7 and 8. */
   originalPayerClaimControlNumber?: string;
+  /**
+   * CLM20 — justifies filing past the payer's timely filing window. Code list per the
+   * 837 implementation guide (1 Proof of eligibility unknown, 9 Original claim
+   * rejected/denied for reasons unrelated to the claim, etc.). Omitted unless set.
+   */
+  delayReasonCode?: string;
   /** CLM06 provider signature on file. */
   providerSignatureOnFile: boolean;
   /** CLM07 assignment: A assigned, B assignment accepted on clinical lab only, C not assigned. */
@@ -601,4 +607,115 @@ export interface EligibilityResponse271 {
   rejections: EligibilityRejection[];
   /** Derived: is there an EB01=1 active-coverage benefit for the health plan? */
   isActive: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// 276 / 277 — Claim status request and response
+// ---------------------------------------------------------------------------
+
+export interface ClaimStatusInquiry276 {
+  payer: { name: string; id: string };
+  provider: Provider;
+  subscriber: {
+    person: Person;
+    memberId: string;
+    dateOfBirth?: string;
+  };
+  /** When inquiring about a dependent rather than the subscriber. */
+  dependent?: { person: Person; dateOfBirth?: string };
+  claim: {
+    /** Our patient control number (837 CLM01), echoed back on the 277. */
+    patientControlNumber: string;
+    totalChargeCents?: number;
+    serviceDateFrom: string;
+    serviceDateThrough?: string;
+  };
+  /** TRN02 — our trace number, echoed in the 277. */
+  traceNumber: string;
+}
+
+/**
+ * One STC segment. Category (STC01-1) is the coarse family — acknowledged,
+ * pending, finalized, error, additional-info-requested; status (STC01-2) is the
+ * specific reason within it.
+ */
+export interface ClaimStatus {
+  categoryCode: string;
+  statusCode: string;
+  /** STC01-3 — the entity the status applies to, when the payer names one. */
+  entityCode?: string;
+  effectiveDate?: string;
+  totalChargeCents?: number;
+  totalPaidCents?: number;
+  patientResponsibilityCents?: number;
+  freeFormMessage?: string;
+}
+
+export interface ClaimStatusRecord {
+  patientControlNumber?: string;
+  payerClaimControlNumber?: string;
+  statuses: ClaimStatus[];
+  serviceLines: Array<{ procedureCode?: string; statuses: ClaimStatus[] }>;
+}
+
+export interface ClaimStatusResponse277 {
+  transactionControlNumber: string;
+  traceNumbers: string[];
+  payer: { name: string };
+  subscriber: { person: Person; memberId?: string };
+  claims: ClaimStatusRecord[];
+}
+
+// ---------------------------------------------------------------------------
+// 277CA — Claim acknowledgement
+// ---------------------------------------------------------------------------
+
+/**
+ * Unsolicited, sent back after an 837 batch rather than in reply to a 276. Unlike
+ * 277, there is no subscriber/dependent split — one HL*PT (patient) loop per claim,
+ * each carrying our own patient control number in TRN02.
+ */
+export interface ClaimAcknowledgment277CA {
+  transactionControlNumber: string;
+  payer: { name: string };
+  submitter: { name: string };
+  claims: Array<{
+    /** TRN02 at the 2200D loop — our own CLM01, not a payer-assigned number. */
+    patientControlNumber: string;
+    payerClaimControlNumber?: string;
+    status: ClaimStatus;
+  }>;
+}
+
+// ---------------------------------------------------------------------------
+// 999 — Functional acknowledgement
+// ---------------------------------------------------------------------------
+
+export interface SegmentError {
+  segmentIdCode?: string;
+  segmentPosition?: number;
+  errorCode: string;
+}
+
+export interface TransactionSetAck {
+  /** AK201 — the ST01 of the set being acknowledged (837, 835, ...). */
+  transactionSetIdCode: string;
+  /** AK202 — the ST02 control number of the set being acknowledged. */
+  transactionSetControlNumber: string;
+  /** AK501 — A accepted, E accepted with errors, R rejected. */
+  statusCode: string;
+  errorCodes: string[];
+  segmentErrors: SegmentError[];
+}
+
+export interface FunctionalAcknowledgment999 {
+  /** AK101 — the GS01 functional identifier of the group being acknowledged. */
+  functionalIdCode: string;
+  /** AK102 — the GS06 control number of the group being acknowledged. */
+  groupControlNumber: string;
+  /** AK901 — A accepted, E accepted with errors, P partially accepted, R rejected. */
+  statusCode: string;
+  transactionSets: TransactionSetAck[];
+  /** Derived: every transaction set in the group accepted with no errors. */
+  accepted: boolean;
 }

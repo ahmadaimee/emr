@@ -16,9 +16,10 @@ the subset Grove needs, in both directions.
 | **837P** | out | Professional claim | `generators/837p.ts` |
 | **837I** | out | Institutional claim (the UB-04 on the wire) | `generators/837i.ts` |
 | **835** | in | Remittance advice (ERA) | `parsers/835.ts` |
-| **999** | in | Functional acknowledgement — was the file syntactically valid? | |
-| **277CA** | in | Claim acknowledgement — did the payer accept the claim? | |
-| **276/277** | out/in | Claim status inquiry and response | |
+| **999** | in | Functional acknowledgement — was the file syntactically valid? | `parsers/999.ts` |
+| **277CA** | in | Claim acknowledgement — did the payer accept the claim? | `parsers/277ca.ts` |
+| **276** | out | Claim status inquiry | `generators/276.ts` |
+| **277** | in | Claim status response | `parsers/277.ts` |
 
 ## Two acknowledgements, two meanings
 
@@ -26,6 +27,25 @@ A **999** says the interchange parsed. A **277CA** says the payer accepted the c
 into adjudication. A file can pass the 999 and still have every claim rejected at the
 277CA — which is why [[Claim Lifecycle]] distinguishes `acknowledged` from `submitted`,
 and `rejected` from `denied`.
+
+## 277CA and 277 are not the same shape
+
+Both carry ST01 `277`, and both carry STC status codes, but they answer different
+questions and are laid out differently:
+
+- **277CA** arrives unsolicited after an 837 batch. There is no subscriber/dependent
+  split — one `HL*n**PT` loop per claim — and **TRN02 on that loop is our own patient
+  control number**, not a payer-assigned one; the payer's own number, when it assigns
+  one this early, rides in `REF*1K` instead.
+- **277** is the reply to a **276** we sent, and mirrors the 276's payer / provider /
+  subscriber / dependent hierarchy (the same shape [[Package - x12]] already uses for
+  270/271). Our patient control number comes back in `REF*EJ`; `TRN` just echoes the
+  trace number from the 276.
+
+`describeClaimStatusCategory()` in `claim-status-codes.ts` turns the STC01-1 category
+(`A2`, `F1`, `P3`, ...) into a family — acknowledged, pending, finalized, error,
+info-requested — worklists group and prioritize on. It is not the full STC01-2 status
+code list, which is too large to be worth embedding.
 
 ## Professional and institutional are not the same transaction
 
@@ -51,8 +71,9 @@ the ISA header rather than fixed, so the tokenizer reads them from the file.
 ## Testing
 
 Fixtures live in `packages/x12/src/__tests__/fixtures/` (`sample-271.x12`,
-`sample-835.x12`). Being a pure package, X12 handling is tested exhaustively without a
-database — see [[Architecture Overview]].
+`sample-835.x12`, `sample-277.x12`, `sample-277ca.x12`, `sample-999.x12`). Being a pure
+package, X12 handling is tested exhaustively without a database — see
+[[Architecture Overview]].
 
 ---
 

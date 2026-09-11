@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { amount, buildInterchange, IMPLEMENTATIONS, toCents } from '../envelope';
 import { generate270 } from '../generators/270';
+import { generate276 } from '../generators/276';
+import { generate278 } from '../generators/278';
 import { generate837P } from '../generators/837p';
 import { checkBalance, parse835 } from '../parsers/835';
 import { parse271, summarizeBenefits } from '../parsers/271';
@@ -338,5 +340,67 @@ describe('270 generator', () => {
     const ids = body.map((s) => s.id);
     expect(ids).toEqual(['BHT', 'HL', 'NM1', 'HL', 'NM1', 'HL', 'TRN', 'NM1', 'DMG', 'DTP', 'EQ', 'EQ']);
     expect(body.find((s) => s.id === 'TRN')?.el(2)).toBe('TRC-20260901-0001');
+  });
+});
+
+describe('276 generator', () => {
+  it('emits a claim status inquiry for the subscriber', () => {
+    const body = generate276(
+      {
+        payer: { name: 'SAMPLE HEALTH PLAN', id: 'SHP001' },
+        provider: { isPerson: true, person: { lastName: 'SMITH', firstName: 'JANE' }, npi: '1987654328' },
+        subscriber: { person: { lastName: 'ALPHA', firstName: 'ALICE' }, memberId: 'ABC123456789' },
+        claim: { patientControlNumber: 'GRV-10041', totalChargeCents: 35000, serviceDateFrom: '2026-08-20' },
+        traceNumber: 'TRC-20260901-0002',
+      },
+      { timestamp: new Date('2026-09-01T13:00:00Z') },
+    );
+    const ids = body.map((s) => s.id);
+    expect(ids).toEqual(['BHT', 'HL', 'NM1', 'HL', 'NM1', 'HL', 'NM1', 'TRN', 'REF', 'AMT', 'DTP']);
+    expect(body.find((s) => s.id === 'REF')?.el(2)).toBe('GRV-10041');
+    expect(body.find((s) => s.id === 'AMT')?.el(2)).toBe('350');
+  });
+
+  it('nests the claim status detail under the dependent when the patient is not the subscriber', () => {
+    const body = generate276(
+      {
+        payer: { name: 'SAMPLE HEALTH PLAN', id: 'SHP001' },
+        provider: { isPerson: true, person: { lastName: 'SMITH', firstName: 'JANE' }, npi: '1987654328' },
+        subscriber: { person: { lastName: 'ALPHA', firstName: 'ALICE' }, memberId: 'ABC123456789' },
+        dependent: { person: { lastName: 'ALPHA', firstName: 'JUNIOR' } },
+        claim: { patientControlNumber: 'GRV-10099', serviceDateFrom: '2026-08-20', serviceDateThrough: '2026-08-20' },
+        traceNumber: 'TRC-20260901-0003',
+      },
+      { timestamp: new Date('2026-09-01T13:00:00Z') },
+    );
+    const ids = body.map((s) => s.id);
+    expect(ids).toEqual(['BHT', 'HL', 'NM1', 'HL', 'NM1', 'HL', 'NM1', 'HL', 'NM1', 'TRN', 'REF', 'DTP']);
+    expect(body.find((s) => s.id === 'DTP')?.el(3)).toBe('20260820-20260820');
+  });
+});
+
+describe('278 generator', () => {
+  it('emits a prior-authorization request with UM, diagnoses, and service lines', () => {
+    const body = generate278(
+      {
+        payer: { name: 'SAMPLE HEALTH PLAN', id: 'SHP001' },
+        requester: { isPerson: true, person: { lastName: 'SMITH', firstName: 'JANE' }, npi: '1987654328' },
+        subscriber: { person: { lastName: 'ALPHA', firstName: 'ALICE' }, memberId: 'ABC123456789' },
+        certificationTypeCode: 'I',
+        serviceTypeCode: 'HC',
+        diagnosisCodes: ['M54.5'],
+        procedureCodes: ['97110', '97140'],
+        serviceDateFrom: '2026-09-15',
+        serviceDateThrough: '2026-12-15',
+        traceNumber: 'TRC-20260901-0004',
+      },
+      { timestamp: new Date('2026-09-01T14:00:00Z') },
+    );
+    const ids = body.map((s) => s.id);
+    expect(ids).toEqual(['BHT', 'HL', 'NM1', 'HL', 'NM1', 'HL', 'NM1', 'TRN', 'UM', 'HI', 'DTP', 'SV1', 'SV1']);
+    expect(body.find((s) => s.id === 'UM')?.el(1)).toBe('I');
+    expect(body.find((s) => s.id === 'HI')?.el(1)).toBe('ABK:M545');
+    const sv1 = body.filter((s) => s.id === 'SV1');
+    expect(sv1.map((s) => s.el(1))).toEqual(['HC:97110', 'HC:97140']);
   });
 });

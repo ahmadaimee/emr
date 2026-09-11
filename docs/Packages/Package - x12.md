@@ -8,7 +8,7 @@ tags: [packages]
 
 See [[X12 Transactions]] for the transaction set and envelope structure.
 
-tokenizer.ts → segment.ts → envelope.ts; generators/ for 270 and 837P; parsers/ for 271 and 835; fixtures under src/__tests__/fixtures/.
+tokenizer.ts → segment.ts → envelope.ts; generators/ for 270, 276, 837P, 837I; parsers/ for 271, 277, 277CA, 835, 999; fixtures under src/__tests__/fixtures/.
 
 ---
 
