@@ -11,10 +11,11 @@ export type DomainEventType =
   | 'eligibility.completed' | 'eligibility.changed' | 'eligibility.batch.completed'
   | 'claim.created' | 'claim.scrubbed' | 'claim.ready' | 'claim.submitted' | 'claim.acknowledged'
   | 'claim.rejected' | 'claim.status_updated' | 'claim.paid' | 'claim.denied'
-  | 'claim.secondary_ready' | 'claim.crossover_expected' | 'claim.timely_filing_at_risk'
+  | 'claim.secondary_ready' | 'claim.crossover_expected' | 'claim.timely_filing_at_risk' | 'claim.custom_status_changed'
   | 'remittance.received' | 'remittance.posted' | 'remittance.out_of_balance'
   | 'denial.created' | 'denial.resolved'
   | 'underpayment.detected'
+  | 'authorization.requested' | 'authorization.decided'
   | 'payment.received' | 'statement.generated' | 'statement.sent'
   | 'task.created';
 

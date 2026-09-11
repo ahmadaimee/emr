@@ -41,7 +41,7 @@ export async function loginAction(form: FormData) {
     redirect(result.mfaRequired ? '/mfa' : '/dashboard');
   } catch (err: any) {
     if (err?.message === 'NEXT_REDIRECT') throw err;
-    console.warn('[Grove Login] DB unavailable, falling back to interactive demo session:', err?.message ?? err);
+    console.warn('[PracticeOS Login] DB unavailable, falling back to interactive demo session:', err?.message ?? err);
     const jar = await cookies();
     jar.set(SESSION_COOKIE, `demo_session_${Date.now()}`, { ...COOKIE, maxAge: 12 * 3600 });
     redirect('/dashboard');

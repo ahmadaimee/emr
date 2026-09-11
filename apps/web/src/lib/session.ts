@@ -141,7 +141,7 @@ export async function pageContext(): Promise<PageContext> {
   const h = await headers();
   return {
     session,
-    run: async (route, fn) => {
+    run: async <T,>(route: string, fn: (ctx: CommandContext, phi: PhiAccessCollector) => Promise<T>) => {
       if (session.sessionId.startsWith('demo_') || process.env.DEMO_MODE === 'true') {
         return resolveRouteFallback(route) as T;
       }
@@ -163,7 +163,7 @@ export async function pageContext(): Promise<PageContext> {
           return result;
         });
       } catch (err: any) {
-        console.warn(`[Grove Demo Fallback] DB unavailable for ${route}, serving synthetic data:`, err?.message ?? err);
+        console.warn(`[PracticeOS Demo Fallback] DB unavailable for ${route}, serving synthetic data:`, err?.message ?? err);
         return resolveRouteFallback(route) as T;
       }
     },

@@ -13,6 +13,14 @@ export { submitClaimCommand } from './claims/submit';
 export type { SubmitClaimResult, SubmitClaimOptions } from './claims/submit';
 export { transitionClaim } from './claims/lifecycle';
 export type { ClaimStatus } from './claims/lifecycle';
+export { createCustomStatusCommand, retireCustomStatusCommand, setClaimCustomStatusCommand } from './claims/custom-status';
+export type { CustomStatusInput } from './claims/custom-status';
+
+export { requestAuthorizationCommand, recordAuthorizationDecisionCommand, linkAuthorizationToClaimCommand } from './authorizations/request';
+export type { RequestAuthorizationInput, RequestAuthorizationResult, RecordAuthorizationDecisionInput } from './authorizations/request';
+
+export { generateStatementRunCommand, sendStatementsCommand } from './statements/generate-run';
+export type { GenerateStatementRunInput, GenerateStatementRunResult } from './statements/generate-run';
 export { loadClaimAssembly, assembleProfessionalClaim, assembleClaimFacts, yearsBetween } from './claims/assembly';
 export type { ClaimAssembly } from './claims/assembly';
 

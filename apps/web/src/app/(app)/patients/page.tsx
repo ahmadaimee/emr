@@ -5,6 +5,7 @@ import { date, relative } from '@/lib/format';
 import { pageContext } from '@/lib/session';
 import { NewPatientModal } from './new-patient-modal';
 import { MergePatientsModal } from './merge-patients-modal';
+import { ImportPatientsModal } from './import-patients-modal';
 
 export const metadata = { title: 'Patients' };
 
@@ -64,13 +65,17 @@ export default async function PatientsPage({
         actions={
           <div className="flex items-center gap-2">
             <MergePatientsModal
-              patients={data.rows.map((r) => ({
-                id: r.p.id,
-                name: `${r.p.lastName}, ${r.p.firstName}`,
-                mrn: r.p.mrn,
-                dob: (r.p.dateOfBirth ?? r.p.dob) as string,
-              }))}
+              patients={data.rows.map((r) => {
+                const p = r.p as any;
+                return {
+                  id: p.id,
+                  name: `${p.lastName}, ${p.firstName}`,
+                  mrn: p.mrn,
+                  dob: (p.dateOfBirth ?? p.dob) as string,
+                };
+              })}
             />
+            <ImportPatientsModal practices={data.practices} />
             <NewPatientModal practices={data.practices} />
           </div>
         }

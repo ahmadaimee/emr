@@ -49,7 +49,6 @@ export function MergePatientsModal({
         onClick={() => setOpen(true)}
         className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-surface-raised px-3 text-xs font-medium text-ink hover:bg-surface-sunken transition-colors"
       >
-        <span className="text-base">🔀</span>
         <span>Merge Duplicate Profiles</span>
       </button>
 
@@ -58,8 +57,8 @@ export function MergePatientsModal({
           <div className="w-full max-w-2xl rounded-xl border border-line bg-surface-raised p-6 shadow-2xl animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-line pb-3.5">
               <div>
-                <h2 className="text-base font-semibold text-ink flex items-center gap-2">
-                  <span>🔀</span> Master Patient Index (MPI) Profile Merge
+                <h2 className="text-base font-semibold text-ink">
+                  Master Patient Index (MPI) Profile Merge
                 </h2>
                 <p className="text-xs text-ink-3 mt-0.5">
                   Consolidate duplicate patient records into a single authoritative primary profile.

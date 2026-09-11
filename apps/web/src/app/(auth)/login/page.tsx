@@ -27,7 +27,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             />
           </svg>
           <div>
-            <div className="font-display text-xl font-semibold tracking-tight">Grove</div>
+            <div className="font-display text-xl font-semibold tracking-tight">PracticeOS</div>
             <div className="text-xs text-ink-3">Practice management & autonomous RCM</div>
           </div>
         </div>
@@ -39,7 +39,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </p>
           <form action={demoLoginAction} className="mt-3">
             <button className="flex h-9 w-full items-center justify-center gap-2 rounded-md bg-grove text-sm font-medium text-ink-inverse shadow hover:bg-grove-strong transition-colors">
-              <span>⚡ Enter Live Demo Experience</span>
+              <span>Enter Live Demo Experience</span>
             </button>
           </form>
         </div>

@@ -175,4 +175,38 @@ export const eligibility: Dataset = {
   baseFilter: sql`ec.org_id = app.current_org()`,
 };
 
-export const DATASETS: Record<string, Dataset> = { claims, denials, ledger, eligibility };
+export const underpayments: Dataset = {
+  key: 'underpayments',
+  label: 'Underpayments',
+  from: sql`remittance_lines rl`,
+  joins: {
+    remittance_claim: { to: sql`remittance_claims rc`, on: sql`rc.id = rl.remittance_claim_id` },
+    claim: { to: sql`claims c`, on: sql`c.id = rc.claim_id` },
+    payer: { to: sql`payers p`, on: sql`p.id = c.payer_id` },
+    practice: { to: sql`practices pr`, on: sql`pr.id = c.practice_id` },
+  },
+  dimensions: {
+    procedure_code: { sql: sql`rl.procedure_code`, type: 'string', label: 'Procedure' },
+    service_date: { sql: sql`rl.service_date`, type: 'date', label: 'Service date', grains: ['day', 'week', 'month', 'quarter', 'year'] },
+    payer_name: { sql: sql`p.name`, type: 'string', label: 'Payer', requires: ['remittance_claim', 'claim', 'payer'] },
+    practice_name: { sql: sql`pr.name`, type: 'string', label: 'Practice', requires: ['remittance_claim', 'claim', 'practice'] },
+    claim_number: { sql: sql`c.claim_number`, type: 'string', label: 'Claim number', requires: ['remittance_claim', 'claim'], phi: true },
+    has_underpayment: { sql: sql`coalesce(rl.underpayment_cents, 0) > 0`, type: 'boolean', label: 'Underpaid' },
+  },
+  measures: {
+    line_count: { sql: sql`count(*)`, label: 'Lines', format: 'integer' },
+    underpaid_line_count: { sql: sql`count(*) filter (where coalesce(rl.underpayment_cents, 0) > 0)`, label: 'Underpaid lines', format: 'integer' },
+    underpaid_amount: { sql: money(sql`sum(rl.underpayment_cents) filter (where rl.underpayment_cents > 0)`), label: 'Underpaid amount', format: 'currency', description: 'Σ (contracted allowed − actual allowed), lines where the payer paid under contract' },
+    expected_amount: { sql: money(sql`sum(rl.expected_allowed_cents)`), label: 'Expected (contracted) amount', format: 'currency' },
+    allowed_amount: { sql: money(sql`sum(rl.allowed_cents)`), label: 'Actual allowed amount', format: 'currency' },
+    underpayment_rate: {
+      sql: sql`round(10000.0 * sum(rl.underpayment_cents) filter (where rl.underpayment_cents > 0) / greatest(sum(rl.expected_allowed_cents) filter (where rl.expected_allowed_cents is not null), 1))`,
+      label: 'Underpayment rate',
+      format: 'percent',
+      description: 'Underpaid ÷ contracted-expected, in basis points',
+    },
+  },
+  baseFilter: sql`rl.org_id = app.current_org()`,
+};
+
+export const DATASETS: Record<string, Dataset> = { claims, denials, ledger, eligibility, underpayments };

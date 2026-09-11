@@ -34,7 +34,7 @@ export default async function MfaPage({ searchParams }: { searchParams: Promise<
           <form action={enrolTotpAction} className="space-y-4">
             <div>
               <h1 className="font-display text-lg font-semibold">Set up multi-factor authentication</h1>
-              <p className="mt-1 text-sm text-ink-3">Grove requires an authenticator app for every account. This takes about a minute.</p>
+              <p className="mt-1 text-sm text-ink-3">PracticeOS requires an authenticator app for every account. This takes about a minute.</p>
             </div>
             <button className="h-9 w-full rounded-md bg-grove text-sm font-medium text-ink-inverse hover:bg-grove-strong">Begin setup</button>
           </form>
@@ -49,7 +49,7 @@ function EnrolStep({ uri }: { uri: string }) {
   return (
     <form action={confirmTotpAction} className="space-y-4">
       <div>
-        <h1 className="font-display text-lg font-semibold">Add Grove to your authenticator</h1>
+        <h1 className="font-display text-lg font-semibold">Add PracticeOS to your authenticator</h1>
         <p className="mt-1 text-sm text-ink-3">Open your authenticator app and add an account with this key, then enter the code it shows.</p>
       </div>
       <div className="rounded-md border border-line bg-surface p-3">
