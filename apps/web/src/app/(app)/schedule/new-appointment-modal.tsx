@@ -17,35 +17,44 @@ interface TypeItem {
   cpt: string;
 }
 
+interface PatientItem {
+  id: string;
+  name: string;
+  mrn: string;
+}
+
 export function NewAppointmentModal({
   providers,
   types,
+  patients,
   date,
 }: {
   providers: ProviderItem[];
   types: TypeItem[];
+  patients: PatientItem[];
   date: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [providerId, setProviderId] = useState(providers[0]?.id || '');
   const [type, setType] = useState(types[1]?.code || 'followup');
-  const [patientName, setPatientName] = useState('');
+  const [patientQuery, setPatientQuery] = useState('');
   const [reason, setReason] = useState('');
   const [start, setStart] = useState('09:00');
   const [when, setWhen] = useState(date);
-  const [payer, setPayer] = useState('Blue Cross Blue Shield');
   const [copay, setCopay] = useState('25.00');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const selected = types.find((t) => t.code === type);
+  const patientLabel = (p: PatientItem) => `${p.name} — ${p.mrn}`;
+  const matchedPatient = patients.find((p) => patientLabel(p) === patientQuery.trim());
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!patientName.trim()) {
-      setError('Patient name is required.');
+    if (!matchedPatient) {
+      setError('Select a patient from the list — start typing a name or MRN.');
       return;
     }
     setLoading(true);
@@ -53,12 +62,11 @@ export function NewAppointmentModal({
     try {
       await bookAppointmentAction({
         providerId,
+        patientId: matchedPatient.id,
         type,
-        patientName: patientName.trim(),
         reason: reason.trim(),
         start,
         date: when,
-        payer,
         copayCents: Math.round((Number(copay) || 0) * 100),
       });
       setSuccess(true);
@@ -66,7 +74,7 @@ export function NewAppointmentModal({
       setTimeout(() => {
         setOpen(false);
         setSuccess(false);
-        setPatientName('');
+        setPatientQuery('');
         setReason('');
       }, 900);
     } catch {
@@ -84,7 +92,6 @@ export function NewAppointmentModal({
         onClick={() => setOpen(true)}
         className="inline-flex h-8 items-center gap-1.5 rounded-md bg-grove px-3 text-xs font-medium text-white shadow-xs transition-colors hover:bg-grove-strong"
       >
-        <span>📅</span>
         <span>Book Appointment</span>
       </button>
 
@@ -137,7 +144,18 @@ export function NewAppointmentModal({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-ink-2">Patient *</label>
-                  <input value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Last, First" className={field} />
+                  <input
+                    value={patientQuery}
+                    onChange={(e) => setPatientQuery(e.target.value)}
+                    placeholder="Start typing a name or MRN…"
+                    list="new-appointment-patients"
+                    className={field}
+                  />
+                  <datalist id="new-appointment-patients">
+                    {patients.map((p) => (
+                      <option key={p.id} value={patientLabel(p)} />
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-ink-2">Reason for visit</label>
@@ -158,11 +176,6 @@ export function NewAppointmentModal({
                   <label className="mb-1 block text-xs font-medium text-ink-2">Copay</label>
                   <input value={copay} onChange={(e) => setCopay(e.target.value)} inputMode="decimal" className={field} />
                 </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-ink-2">Payer</label>
-                <input value={payer} onChange={(e) => setPayer(e.target.value)} className={field} />
               </div>
 
               {selected ? (

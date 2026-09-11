@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { schema, sql } from '@grove/db';
 import { Card, Empty, Kpi, Money, PageHeader } from '@/components/ui';
 import { pageContext } from '@/lib/session';
+import { APPOINTMENT_TYPES } from '@/lib/schedule';
+import { loadScheduleDay } from '@/lib/schedule-queries';
 import { NewAppointmentModal } from './new-appointment-modal';
 import { DayBook } from './day-book';
 
@@ -52,7 +55,31 @@ export default async function SchedulePage({
   if (sp.provider) qs.set('provider', sp.provider);
   const route = qs.toString() ? `/schedule?${qs}` : '/schedule';
 
-  const data: any = await run(route, async () => ({}));
+  const requestedDate = sp.date || new Date().toISOString().slice(0, 10);
+
+  const data: any = await run(route, async (ctx) => {
+    const day = await loadScheduleDay(ctx, { date: requestedDate, providerId: sp.provider });
+    const patientRows = await ctx.tx
+      .select({ id: schema.patients.id, firstName: schema.patients.firstName, lastName: schema.patients.lastName, mrn: schema.patients.mrn })
+      .from(schema.patients)
+      .where(sql`${schema.patients.mergedIntoPatientId} is null`)
+      .orderBy(schema.patients.lastName)
+      .limit(500);
+    return {
+      patients: patientRows.map((p) => ({ id: p.id, name: `${p.lastName}, ${p.firstName}`, mrn: p.mrn })),
+      date: requestedDate,
+      isToday: requestedDate === new Date().toISOString().slice(0, 10),
+      dates: [-1, 0, 1, 2, 3].map((o) => {
+        const d = new Date();
+        d.setDate(d.getDate() + o);
+        return { value: d.toISOString().slice(0, 10), offset: o };
+      }),
+      providers: day.providers,
+      totals: day.totals,
+      allProviders: day.allProviders,
+      appointmentTypes: APPOINTMENT_TYPES,
+    };
+  });
 
   const providers: any[] = data.providers ?? [];
   const totals = data.totals ?? {};
@@ -71,7 +98,7 @@ export default async function SchedulePage({
       <PageHeader
         title="Scheduling"
         subtitle="Appointment book, provider availability, and open clinic time across every practice."
-        actions={<NewAppointmentModal providers={data.allProviders ?? []} types={data.appointmentTypes ?? []} date={data.date} />}
+        actions={<NewAppointmentModal providers={data.allProviders ?? []} types={data.appointmentTypes ?? []} patients={data.patients ?? []} date={data.date} />}
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
