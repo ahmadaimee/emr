@@ -110,10 +110,13 @@ function compileFilter(expr: SQL, op: FilterOp, values: Array<string | number | 
       return sql`${expr} between ${a} and ${b}`;
     case 'in':
       if (values.length === 0) throw new ReportValidationError('in requires at least one value');
-      return sql`${expr} = any(${values})`;
+      // A plain array interpolated into `sql` expands to a parenthesised parameter
+      // list (`($1, $2, ...)`), meant for `x in (...)` — `any((...))` on that is a row
+      // constructor, not an array, and Postgres rejects it. `array[...]` builds a real one.
+      return sql`${expr} = any(array[${sql.join(values.map((v) => sql`${v}`), sql`, `)}])`;
     case 'not_in':
       if (values.length === 0) throw new ReportValidationError('not_in requires at least one value');
-      return sql`not (${expr} = any(${values}))`;
+      return sql`not (${expr} = any(array[${sql.join(values.map((v) => sql`${v}`), sql`, `)}]))`;
     case 'is_null': return sql`${expr} is null`;
     case 'not_null': return sql`${expr} is not null`;
     case 'contains':
