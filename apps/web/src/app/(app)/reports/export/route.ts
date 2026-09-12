@@ -15,6 +15,18 @@ export async function GET(request: Request) {
   const queryDef = STANDARD_REPORTS[key];
   if (!queryDef) notFound();
 
+  if (new URL(request.url).searchParams.get('diag') === '1') {
+    return new Response(
+      JSON.stringify({
+        hasAuditSecret: Boolean(process.env.AUDIT_CHAIN_SECRET) && process.env.AUDIT_CHAIN_SECRET !== 'replace-me',
+        hasDbUrl: Boolean(process.env.DATABASE_URL),
+        demoMode: process.env.DEMO_MODE,
+        nodeEnv: process.env.NODE_ENV,
+      }),
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
   const { run, session } = await pageContext();
 
   const csv = await run('/reports/export', async (ctx, phi) => {
