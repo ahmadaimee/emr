@@ -24,6 +24,10 @@ const REPORT_TABS: Record<string, { title: string; description: string }> = {
     title: 'Denial Analysis by Category',
     description: 'Denied dollars, count, and overturn rate categorized by root cause (eligibility, coding, auth, timely filing).',
   },
+  denials_by_payer_month: {
+    title: 'Denials by Payer & Month',
+    description: 'Denial count and denied dollars trended by month for each payer — is a denial problem getting better or worse.',
+  },
   timely_filing_risk: {
     title: 'Timely Filing Risk',
     description: 'Claims approaching payer timely-filing statutory deadlines requiring immediate submission.',
@@ -132,9 +136,17 @@ export default async function ReportsPage({
         })}
       </div>
 
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-ink">{meta.title}</h2>
-        <p className="mt-0.5 text-xs text-ink-3">{meta.description}</p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-ink">{meta.title}</h2>
+          <p className="mt-0.5 text-xs text-ink-3">{meta.description}</p>
+        </div>
+        <a
+          href={`/reports/export?report=${currentKey}`}
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-3 text-xs font-medium text-ink hover:bg-surface-sunken transition-colors"
+        >
+          Export CSV
+        </a>
       </div>
 
       <Card>

@@ -100,7 +100,11 @@ export function compileReport(q: ReportQuery): CompiledReport {
   return { query, columns, containsPhi };
 }
 
-function compileFilter(expr: SQL, op: FilterOp, values: Array<string | number | boolean>): SQL {
+function compileFilter(rawExpr: SQL, op: FilterOp, values: Array<string | number | boolean>): SQL {
+  // A dimension's sql can itself be a compound expression (e.g. `coalesce(x, 0) > 0`),
+  // and Postgres's comparison operators are non-associative — `expr > 0 = $1` is
+  // ambiguous/rejected. Parenthesising is always safe, even for a plain column.
+  const expr = sql`(${rawExpr})`;
   const [a, b] = values;
   switch (op) {
     case 'eq': return sql`${expr} = ${a}`;
