@@ -55,7 +55,10 @@ export function compileReport(q: ReportQuery): CompiledReport {
     }
     const alias = sql.identifier(d.grain ? `${d.key}_${d.grain}` : d.key);
     selects.push(sql`${expr} as ${alias}`);
-    groupBy.push(sql`${selects.length}`);
+    // A plain interpolated number is a bind parameter, but GROUP BY's positional
+    // shorthand needs a literal integer in the query text — sql.raw is safe here since
+    // this is always our own computed array length, never user input.
+    groupBy.push(sql.raw(String(selects.length)));
     columns.push({ key: d.grain ? `${d.key}_${d.grain}` : d.key, label: dim.label, kind: 'dimension' });
   }
   for (const m of q.measures) {
@@ -86,7 +89,8 @@ export function compileReport(q: ReportQuery): CompiledReport {
   for (const s of q.sort ?? []) {
     const idx = columns.findIndex((c) => c.key === s.key);
     if (idx < 0) throw new ReportValidationError(`Cannot sort by "${s.key}"; it is not a selected column`);
-    orderBy.push(sql`${idx + 1} ${s.dir === 'desc' ? sql`desc` : sql`asc`} nulls last`);
+    // Same as groupBy above: ORDER BY's positional shorthand needs a literal integer.
+    orderBy.push(sql`${sql.raw(String(idx + 1))} ${s.dir === 'desc' ? sql`desc` : sql`asc`} nulls last`);
   }
 
   const limit = Math.max(1, Math.min(MAX_LIMIT, Math.trunc(q.limit ?? 1000)));
