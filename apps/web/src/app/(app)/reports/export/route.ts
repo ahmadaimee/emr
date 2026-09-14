@@ -3,6 +3,10 @@ import { appendAuditEvent } from '@grove/audit';
 import { compileReport, STANDARD_REPORTS } from '@grove/reporting';
 import { pageContext } from '@/lib/session';
 
+// PHI-bearing report data must never be cached or statically optimized — same reason
+// (app)/layout.tsx forces every authenticated page dynamic.
+export const dynamic = 'force-dynamic';
+
 /** Same csv escaping rule as RFC 4180: quote a field if it contains a comma, quote, or newline. */
 function csvField(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -14,18 +18,6 @@ export async function GET(request: Request) {
   const key = new URL(request.url).searchParams.get('report') ?? '';
   const queryDef = STANDARD_REPORTS[key];
   if (!queryDef) notFound();
-
-  if (new URL(request.url).searchParams.get('diag') === '1') {
-    return new Response(
-      JSON.stringify({
-        hasAuditSecret: Boolean(process.env.AUDIT_CHAIN_SECRET) && process.env.AUDIT_CHAIN_SECRET !== 'replace-me',
-        hasDbUrl: Boolean(process.env.DATABASE_URL),
-        demoMode: process.env.DEMO_MODE,
-        nodeEnv: process.env.NODE_ENV,
-      }),
-      { headers: { 'Content-Type': 'application/json' } },
-    );
-  }
 
   const { run, session } = await pageContext();
 
