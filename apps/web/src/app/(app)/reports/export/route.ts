@@ -31,7 +31,8 @@ export async function GET(request: Request) {
       orgId: ctx.tenant.orgId,
       action: 'export',
       resourceType: 'report',
-      resourceId: key,
+      // resourceId is a uuid column; a standard report has no row of its own — the key
+      // (e.g. "ar_aging_by_payer") goes in context instead.
       actorUserId: session.actor.userId,
       sessionId: session.sessionId,
       requestId: ctx.tenant.requestId,
